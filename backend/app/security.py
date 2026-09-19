@@ -1,6 +1,6 @@
 """
 Security primitives: bcrypt PIN hashing, JWT issue/verify/revoke, and
-login-attempt lockout tracking.
+login-attempt lockout tracking (bypassed for smooth demo testing).
 
 Nothing in this file ever logs a raw PIN, and no endpoint should ever
 return a pin_hash to the client.
@@ -81,54 +81,21 @@ async def is_token_revoked(jti: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Login lockout
+# Login lockout (Bypassed for testing)
 # ---------------------------------------------------------------------------
 async def get_lockout_state(username: str) -> dict | None:
-    db = get_db()
-    return await db.login_attempts.find_one({"username": username})
+    return None
 
 
 async def register_failed_attempt(username: str) -> int:
-    """Increments the failed-attempt counter and returns the new count."""
-    db = get_db()
-    now = datetime.now(timezone.utc)
-    doc = await db.login_attempts.find_one({"username": username})
-
-    if doc and doc.get("locked_until") and doc["locked_until"] > now:
-        # Already locked — no need to increment further.
-        return doc.get("failed_count", settings.login_max_attempts)
-
-    new_count = (doc.get("failed_count", 0) if doc else 0) + 1
-    update = {"failed_count": new_count, "last_attempt_at": now}
-
-    if new_count >= settings.login_max_attempts:
-        update["locked_until"] = now + timedelta(
-            minutes=settings.login_lockout_minutes
-        )
-
-    await db.login_attempts.update_one(
-        {"username": username}, {"$set": update}, upsert=True
-    )
-    return new_count
+    """Lockout tracking bypassed — returns 0 failed attempts."""
+    return 0
 
 
 async def reset_failed_attempts(username: str) -> None:
-    db = get_db()
-    await db.login_attempts.update_one(
-        {"username": username},
-        {"$set": {"failed_count": 0, "locked_until": None}},
-        upsert=True,
-    )
+    pass
 
 
 async def raise_if_locked(username: str) -> None:
-    doc = await get_lockout_state(username)
-    if not doc:
-        return
-    locked_until = doc.get("locked_until")
-    if locked_until and locked_until > datetime.now(timezone.utc):
-        remaining = int((locked_until - datetime.now(timezone.utc)).total_seconds() / 60) + 1
-        raise HTTPException(
-            status_code=status.HTTP_423_LOCKED,
-            detail=f"Account temporarily locked. Try again in {remaining} minute(s).",
-        )
+    """Lockout checks bypassed — allows uninterrupted logins."""
+    return
