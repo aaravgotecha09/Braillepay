@@ -4,16 +4,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.database import close_client, ensure_indexes
+from app.database import close_client, ensure_indexes, get_db
 from app.routes import accounts as account_routes
 from app.routes import auth as auth_routes
 from app.routes import demo as demo_routes
 from app.routes import notifications as notification_routes
-from app.routes import payment_requests as payment_request_routes
 from app.routes import payments as payment_routes
 from app.routes import qr as qr_routes
 from app.routes import transactions as transaction_routes
 from app.routes import users as user_routes
+from app.services import seed_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("braillepay")
@@ -44,6 +44,16 @@ app.add_middleware(
 @app.on_event("startup")
 async def on_startup():
     await ensure_indexes()
+    
+    # Automatically seed the database if demo mode is active
+    if settings.demo_mode:
+        try:
+            db = get_db()
+            await seed_service.seed_all(db)
+            logger.info("Demo database seeded successfully on startup.")
+        except Exception as e:
+            logger.error(f"Failed to seed database on startup: {e}")
+
     logger.info("BraillePay backend started. DEMO_MODE=%s", settings.demo_mode)
 
 
