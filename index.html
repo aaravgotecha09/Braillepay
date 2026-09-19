@@ -969,10 +969,14 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
       <button data-nav="settings"><span class="ic">⚙</span><span data-i18n="tab_settings_short">Settings</span></button>
     </nav>
 
-  </div>
+ </div>
 </div>
 
-<script src="config.js"></script>
+<script>
+  window.APP_CONFIG = {
+    API_URL: "https://braillepay-production.up.railway.app"
+  };
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 <script>
 (function(){
