@@ -424,6 +424,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <input class="search-input" id="login-pin-input" type="password" inputmode="numeric" maxlength="12" placeholder="1234" autocomplete="current-password" aria-label="PIN">
         <div id="login-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;" aria-live="assertive"></div>
         <div class="btn-row"><button class="btn btn-primary" id="login-submit-btn">Sign in</button></div>
+        <div class="btn-row"><button class="btn btn-ghost" id="login-passkey-btn">Use a passkey instead</button></div>
 
         <h3 style="margin:18px 0 8px;font-size:14px;">Demo accounts</h3>
         <div class="preset-row" id="login-demo-users"></div>
@@ -454,13 +455,18 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div class="nav-grid" role="navigation" aria-label="Main menu">
           <button class="nav-card" data-nav="scan"><div class="icon">▣</div><b data-i18n="nav_scan_title">Scan QR</b><span data-i18n="nav_scan_sub">Open the camera and verify a code</span></button>
           <button class="nav-card" data-nav="send"><div class="icon alt">₹</div><b data-i18n="send_title">Send Money</b><span data-i18n="nav_send_sub">Demo UPI-style payment (simulated)</span></button>
+          <button class="nav-card" data-nav="receive"><div class="icon">📥</div><b>Receive Money</b><span>Show your QR, share your UPI ID</span></button>
+          <button class="nav-card" data-nav="requests"><div class="icon alt">⇄</div><b>Payment Requests</b><span>Ask for, pay, or decline a request</span></button>
           <button class="nav-card" data-nav="balance"><div class="icon">💰</div><b data-i18n="balance_title">Balance &amp; Transactions</b><span data-i18n="nav_balance_sub">Demo balance, recent activity</span></button>
+          <button class="nav-card" data-nav="banks"><div class="icon alt">🏦</div><b>Banks</b><span>The two demo banks behind BraillePay</span></button>
+          <button class="nav-card" data-nav="notifications"><div class="icon">🔔</div><b>Notifications</b><span id="home-notif-sub">Payments, requests, refunds</span></button>
           <button class="nav-card" data-nav="learning"><div class="icon alt">🎓</div><b data-i18n="learn_title">Learning Mode</b><span data-i18n="nav_learning_sub">Interactive Braille trainer</span></button>
           <button class="nav-card" data-nav="visualize"><div class="icon">⠿</div><b data-i18n="viz_title">Visualizer</b><span data-i18n="nav_viz_sub">Type anything, feel every cell</span></button>
           <button class="nav-card" data-nav="history"><div class="icon alt">🕘</div><b data-i18n="history_title">Scan History</b><span data-i18n="nav_history_sub">Search and replay past scans</span></button>
           <button class="nav-card wide" data-nav="demo"><div class="icon">▶</div><div><b data-i18n="demo_title">Guided Demo</b><div><span data-i18n="nav_demo_sub">A cinematic walkthrough — no camera needed</span></div></div></button>
           <button class="nav-card" data-nav="settings"><div class="icon alt">⚙</div><b data-i18n="nav_settings_title">Accessibility &amp; Security</b><span data-i18n="nav_settings_sub">Voice, haptics, lock, contrast</span></button>
           <button class="nav-card" data-nav="about"><div class="icon">ℹ</div><b data-i18n="about_title">About</b><span data-i18n="nav_about_sub">Roadmap &amp; what's next</span></button>
+          <button class="nav-card" id="nav-card-admin" data-nav="admin" hidden><div class="icon alt">📊</div><b>Demo Dashboard</b><span>Totals across all six demo accounts</span></button>
         </div>
       </section>
 
@@ -488,6 +494,8 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div id="scan-start-controls">
           <button class="btn btn-primary" id="btn-start-camera" data-i18n="scan_start_camera">Start camera</button>
           <button class="btn btn-secondary" style="margin-top:10px;" id="btn-try-demo-scan" data-i18n="scan_try_no_camera">Try it without a camera</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" id="btn-use-demo-qr">Use Demo QR (BraillePay payment)</button>
+          <div class="preset-row" id="scan-demo-qr-list" hidden style="margin-top:10px;"></div>
         </div>
 
         <!-- verification sequence (fully simulated, no real payment) -->
@@ -709,6 +717,11 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div class="setting-row">
           <div class="setting-label"><b>Account</b><span id="settings-account-line">Not signed in</span></div>
           <button class="btn btn-secondary btn-sm" id="settings-signout-btn">Sign out</button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label"><b>Server passkey</b><span id="settings-passkey-status">Register this device to sign in without a PIN next time</span></div>
+          <button class="btn btn-secondary btn-sm" id="settings-register-passkey-btn">Register passkey</button>
         </div>
 
         <div class="setting-row">
@@ -944,6 +957,83 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div id="balance-tx-list"></div>
       </section>
 
+      <!-- ============ RECEIVE MONEY ============ -->
+      <section class="screen" id="screen-receive" aria-label="Receive money">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Receive Money</div><div class="screen-sub">Share this to get simulated money from another BraillePay demo user</div></div>
+        </div>
+        <div class="verify-banner"><span class="dot-live"></span> Demo QR — no real bank or UPI network involved</div>
+        <div class="summary-card" style="text-align:center;">
+          <img id="receive-qr-img" alt="Your BraillePay QR code" style="width:180px;height:180px;border-radius:12px;background:#fff;padding:10px;margin:8px auto;display:block;" />
+          <div style="font-family:var(--font-display);font-size:18px;font-weight:700;" id="receive-name">—</div>
+          <div class="cell-caption" id="receive-upi">—</div>
+          <div class="cell-caption" id="receive-bank">—</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="receive-copy-upi">Copy UPI ID</button>
+          <button class="btn btn-secondary" id="receive-download-qr">Download QR</button>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost" id="receive-share-qr">Share QR</button></div>
+        <p class="disclaimer">Ask another BraillePay demo user to scan this QR (or pick your name from Scan → Use Demo QR) to send you simulated money.</p>
+      </section>
+
+      <!-- ============ PAYMENT REQUESTS ============ -->
+      <section class="screen" id="screen-requests" aria-label="Payment requests">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Payment Requests</div><div class="screen-sub">Ask a demo user for simulated money, or settle a request from someone else</div></div>
+        </div>
+
+        <h3 style="margin:8px 0 8px;font-size:14px;">New request</h3>
+        <div class="setting-label" style="margin-bottom:6px;"><b>Request from (UPI ID)</b></div>
+        <input class="search-input" id="req-payer-input" type="text" placeholder="rohan@braillepay" aria-label="Request from UPI ID">
+        <div class="preset-row" id="req-demo-payers"></div>
+        <div class="setting-label" style="margin:10px 0 6px;"><b>Amount (₹)</b></div>
+        <input class="search-input" id="req-amount-input" type="number" min="1" placeholder="200" aria-label="Request amount">
+        <div class="setting-label" style="margin:10px 0 6px;"><b>Note (optional)</b></div>
+        <input class="search-input" id="req-note-input" type="text" placeholder="Splitting the cab" maxlength="60" aria-label="Request note">
+        <div id="req-create-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;"></div>
+        <div class="btn-row"><button class="btn btn-primary" id="req-create-btn">Send request</button></div>
+
+        <h3 style="margin:20px 0 8px;font-size:14px;">Incoming — waiting on you</h3>
+        <div id="req-incoming-list"><p class="cell-caption">Loading…</p></div>
+
+        <h3 style="margin:20px 0 8px;font-size:14px;">Outgoing — you requested</h3>
+        <div id="req-outgoing-list"><p class="cell-caption">Loading…</p></div>
+      </section>
+
+      <!-- ============ BANKS ============ -->
+      <section class="screen" id="screen-banks" aria-label="Demo banks">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Banks</div><div class="screen-sub">Two fictional demo banks — not real financial institutions</div></div>
+        </div>
+        <div id="banks-list"><p class="cell-caption">Loading…</p></div>
+        <p class="disclaimer">These are simulated demo banks created for BraillePay. No real bank, UPI, or NPCI infrastructure is involved.</p>
+      </section>
+
+      <!-- ============ NOTIFICATIONS ============ -->
+      <section class="screen" id="screen-notifications" aria-label="Notifications">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Notifications</div><div class="screen-sub" id="notif-screen-sub">All caught up</div></div>
+        </div>
+        <div id="notif-list"><p class="cell-caption">Loading…</p></div>
+      </section>
+
+      <!-- ============ DEMO ADMIN DASHBOARD ============ -->
+      <section class="screen" id="screen-admin" aria-label="Demo dashboard">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Demo Dashboard</div><div class="screen-sub">Totals across all six seeded demo accounts</div></div>
+        </div>
+        <div id="admin-stats"><p class="cell-caption">Loading…</p></div>
+        <h3 style="margin:18px 0 8px;font-size:14px;">Recent transactions</h3>
+        <div id="admin-recent-tx"></div>
+        <div class="btn-row"><button class="btn btn-secondary" id="admin-reset-btn">Reset Demo Data</button></div>
+      </section>
+
     </div>
 
     <!-- ============ APP LOCK OVERLAY ============ -->
@@ -969,16 +1059,12 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
       <button data-nav="settings"><span class="ic">⚙</span><span data-i18n="tab_settings_short">Settings</span></button>
     </nav>
 
- </div>
+  </div>
 </div>
 
-<script>
-  window.APP_CONFIG = {
-    API_URL: "https://braillepay-production.up.railway.app"
-  };
-</script>
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
-<script type="module">
+<script>
 (function(){
 "use strict";
 
@@ -1905,7 +1991,7 @@ function wireHoldToReplay(wrapId, getCh, hooksBuilder, holdBtnEl){
 /* ============================================================
    NAVIGATION
    ============================================================ */
-const SCREEN_TITLES = { home:'Home', scan:'Scan QR', learning:'Learning Mode', visualize:'Visualizer', demo:'Guided Demo', settings:'Accessibility settings', history:'Scan History', about:'About', send:'Send Money', balance:'Balance and Transactions' };
+const SCREEN_TITLES = { home:'Home', scan:'Scan QR', learning:'Learning Mode', visualize:'Visualizer', demo:'Guided Demo', settings:'Accessibility settings', history:'Scan History', about:'About', send:'Send Money', balance:'Balance and Transactions', receive:'Receive Money', requests:'Payment Requests', login:'Sign in', banks:'Banks', notifications:'Notifications', admin:'Demo Dashboard' };
 function showScreen(name, opts){
   opts = opts || {};
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
@@ -2118,6 +2204,42 @@ document.getElementById('btn-try-demo-scan').addEventListener('click', ()=>{
   document.getElementById('camera-placeholder').hidden = true;
   lockOnThenDecode(pick, 'demo');
 });
+document.getElementById('btn-use-demo-qr').addEventListener('click', async ()=>{
+  const list = document.getElementById('scan-demo-qr-list');
+  list.hidden = false;
+  list.innerHTML = '';
+  const loading = document.createElement('span');
+  loading.className = 'cell-caption';
+  loading.textContent = 'Loading demo accounts…';
+  list.appendChild(loading);
+  try{
+    const users = await api.getDemoQRList();
+    list.innerHTML = '';
+    users
+      .filter(u => !state.auth.user || u.upi_id !== state.auth.user.upi_id)
+      .forEach(u=>{
+        const chip = document.createElement('button');
+        chip.className = 'preset-chip';
+        chip.type = 'button';
+        chip.textContent = u.name;
+        chip.setAttribute('aria-label', 'Simulate scanning '+u.name+"'s BraillePay QR");
+        chip.addEventListener('click', ()=>{
+          list.hidden = true;
+          document.getElementById('scan-frame').hidden = false;
+          document.getElementById('camera-placeholder').hidden = true;
+          lockOnThenDecode(JSON.stringify(u.payload), 'demo-qr');
+        });
+        list.appendChild(chip);
+      });
+  }catch(e){
+    list.innerHTML = '';
+    const err = document.createElement('span');
+    err.className = 'cell-caption';
+    err.style.color = 'var(--danger)';
+    err.textContent = 'Could not load demo accounts — is the BraillePay server running?';
+    list.appendChild(err);
+  }
+});
 
 function lockOnThenDecode(text, source){
   const frame = document.getElementById('scan-frame');
@@ -2171,6 +2293,16 @@ function parseUpiPayload(text){
 }
 
 function runVerification(text, source){
+  // BraillePay's own payment QR payload gets a dedicated, backend-verified,
+  // privacy-preserving flow (Part 12/33 of the spec) instead of the
+  // generic "spell out whatever this QR says" reader below.
+  let braillePayPayload = null;
+  try{
+    const parsed = JSON.parse(text);
+    if(parsed && parsed.type === 'braillepay_payment' && parsed.upi_id) braillePayPayload = parsed;
+  }catch(e){ /* not JSON — this is an ordinary QR, fall through as before */ }
+  if(braillePayPayload){ runBraillePayQrFlow(braillePayPayload, source); return; }
+
   stopCamera();
   document.getElementById('scan-start-controls').hidden = true;
   document.getElementById('scan-summary').hidden = true;
@@ -2233,6 +2365,119 @@ function runVerification(text, source){
 
 let scanPlayer = null;
 let scanText = '';
+
+/* ============================================================
+   BRAILLEPAY PAYMENT QR — dedicated, backend-verified flow.
+   The recipient's identity is deliberately NOT shown on screen
+   or spoken aloud until the person has felt it out privately in
+   Braille and chosen to continue — see Part 33 of the spec.
+   ============================================================ */
+async function runBraillePayQrFlow(payload, source){
+  stopCamera();
+  document.getElementById('scan-start-controls').hidden = true;
+  document.getElementById('scan-summary').hidden = true;
+  document.getElementById('camera-wrap').style.display = 'none';
+  document.getElementById('scan-verify').hidden = false;
+  const ring = document.getElementById('confidence-ring');
+  const valueEl = document.getElementById('confidence-value');
+  ring.style.setProperty('--pct', 0); valueEl.textContent = '0%';
+  const stepsWrap = document.getElementById('verify-steps');
+  stepsWrap.innerHTML = '';
+  const steps = [
+    { label:'BraillePay QR detected', detail:'A personal BraillePay payment identity. Category confirmed — identity stays private for now.' },
+    { label:'Checking with BraillePay', detail:'Verifying this identity against the server (simulated — no bank or UPI network involved).' },
+    { label:'Ready to reveal privately', detail:'Feel the name in Braille below, then continue to enter an amount.' }
+  ];
+  const stepEls = steps.map(s=>{
+    const el = document.createElement('div');
+    el.className = 'vstep';
+    el.innerHTML = '<div class="vicon"><span class="vspin"></span></div><div class="vtext"><b>'+s.label+'</b><span>'+s.detail+'</span></div>';
+    stepsWrap.appendChild(el);
+    return el;
+  });
+  announce('BraillePay payment QR detected. Verifying — the recipient stays private for now.', true);
+
+  let pct = 0;
+  const totalDuration = 1400;
+  const startTime = performance.now();
+  function animateConfidence(now){
+    const tt = Math.min(1, (now-startTime)/totalDuration);
+    pct = Math.round((1-Math.pow(1-tt,3))*100);
+    ring.style.setProperty('--pct', pct); valueEl.textContent = pct+'%';
+    if(tt < 1) requestAnimationFrame(animateConfidence);
+  }
+  requestAnimationFrame(animateConfidence);
+  stepEls[0].classList.add('done'); stepEls[0].querySelector('.vicon').innerHTML = '✓';
+  vibrateExact(70);
+
+  let verified = null;
+  try{
+    verified = await api.lookupUser(payload.upi_id);
+  }catch(e){
+    stepEls[1].classList.add('done');
+    stepEls[1].querySelector('.vicon').innerHTML = '⚠';
+    stepEls[1].querySelector('.vtext').innerHTML = '<b>Could not verify</b><span>'+(e.detail || 'This BraillePay identity could not be verified.')+'</span>';
+    announce('This QR could not be verified. '+(e.detail || ''), true);
+    setTimeout(()=>{
+      document.getElementById('scan-verify').hidden = true;
+      document.getElementById('scan-start-controls').hidden = false;
+      document.getElementById('camera-wrap').style.display = '';
+    }, 2200);
+    return;
+  }
+  stepEls[1].classList.add('done'); stepEls[1].querySelector('.vicon').innerHTML = '✓';
+  vibrateExact(70);
+
+  setTimeout(()=>{
+    stepEls[2].classList.add('done'); stepEls[2].querySelector('.vicon').innerHTML = '✓';
+    vibratePattern([90,60,90,60,180]);
+    document.getElementById('scan-verify').hidden = true;
+    beginBraillePayReveal(verified);
+  }, 500);
+}
+
+function beginBraillePayReveal(verified){
+  document.getElementById('scan-player').hidden = false;
+  const text = verified.user.name;
+  const chars = text.split('');
+  scanPlayer = createSequencePlayer({
+    getChars: ()=>chars,
+    els: {
+      cellEl: document.getElementById('scan-cell'), ringEl: document.getElementById('scan-ring'),
+      waveformEl: document.getElementById('scan-waveform'), chipEl: document.getElementById('scan-chip'),
+      revealChar: false
+    },
+    onProgress: (i, total)=>{
+      document.getElementById('scan-caption').textContent = chars[i] === ' '
+        ? 'A space — one longer pulse marks it.'
+        : 'Feel this letter of the recipient\'s name. It stays off-screen until you continue.';
+      document.getElementById('scan-progress-label').textContent = 'Letter '+(i+1)+' of '+total;
+      document.getElementById('scan-progress-pct').textContent = Math.round(((i+1)/total)*100)+'%';
+      document.getElementById('scan-progress-fill').style.width = (((i+1)/total)*100)+'%';
+    },
+    onDone: ()=>proceedToSendFromQr(verified)
+  });
+  scanPlayer.setRate(1.4);
+  document.getElementById('scan-substate').textContent = 'Feel the recipient\'s name in Braille, one letter at a time';
+  announce('Reading the recipient\'s name in Braille now. It stays private until you continue to payment.');
+}
+
+function proceedToSendFromQr(verified){
+  document.getElementById('scan-player').hidden = true;
+  showScreen('send');
+  state.send.recipient = verified.user.upi_id;
+  state.send.recipientName = verified.user.name;
+  state.send.recipientBank = verified.bank.name;
+  document.getElementById('rp-name').textContent = verified.user.name;
+  document.getElementById('rp-upi').textContent = verified.user.upi_id;
+  document.getElementById('rp-bank').textContent = verified.bank.name;
+  document.getElementById('send-recipient-card').hidden = false;
+  sendRecipientInput.value = verified.user.upi_id;
+  document.getElementById('send-balance-display').textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
+  showSendStep('amount');
+  announce('Recipient verified: '+verified.user.name+'. Enter an amount to send.', true);
+}
+
 function beginBrailleReadout(text, source){
   document.getElementById('scan-player').hidden = false;
   scanText = text;
@@ -3026,7 +3271,12 @@ const COMMAND_MAP = [
                                   'क्यूआर स्कैन करो','स्कैन करो','कोड स्कैन करो', 'क्यूआर स्कॅन करा','स्कॅन करा'] },
   { screen:'send',     patterns:['send money','send a payment','pay someone','make a payment','transfer money','pay',
                                   'पैसे भेजो','भुगतान करो', 'पैसे पाठवा','पेमेंट करा'] },
+  { screen:'receive',  patterns:['receive money','show my qr','show my upi','my qr code','my upi id','receive'] },
+  { screen:'requests', patterns:['payment requests','show requests','my requests','request money'] },
+  { screen:'notifications', patterns:['show notifications','my notifications','notifications'] },
+  { screen:'banks',    patterns:['show banks','open banks','banks'] },
   { screen:'balance',  patterns:['check balance','check my balance','what is my balance','show balance','my balance','balance',
+                                  'show transactions','transaction history','show my transactions',
                                   'बैलेंस चेक करो','मेरा बैलेंस बताओ', 'बॅलन्स तपासा','माझी शिल्लक सांगा'] },
   { screen:'settings', patterns:['open settings','accessibility settings','settings',
                                   'सेटिंग्स खोलो', 'सेटिंग्ज उघडा'] },
@@ -3184,6 +3434,40 @@ function matchLearningCharacterCommand(text){
   return { valid: !!resolved, ch: resolved || m[2].trim().toUpperCase(), heard: m[2].trim() };
 }
 /* Prevents the same command firing twice from overlapping interim/final recognition events. */
+/* "Hey Braille, send 500 to Shivani" / "pay 200 rupees to Rahul" — parses an
+   amount + a first-name fragment, resolves the name against the real demo
+   users from the backend, and always stops at the Send Money confirmation
+   step for an explicit Confirm — voice never executes a payment directly
+   (Part 32 of the spec). */
+function matchSendMoneyCommand(text){
+  let s = normalizeSpeechText(text);
+  for(const w of WAKE_PHRASE_VARIANTS){ if(s.startsWith(w)){ s = s.slice(w.length).trim(); break; } }
+  const m = s.match(/\b(?:send|pay|transfer)\s+(?:rs\.?|rupees|₹)?\s*(\d+(?:\.\d{1,2})?)\s*(?:rupees)?\s*(?:to\s+)?([a-z]+)\b/);
+  if(!m) return null;
+  return { amount: parseFloat(m[1]), namePart: m[2].trim().toLowerCase() };
+}
+async function handleVoiceSendCommand(cmd){
+  if(!state.auth.unlocked){ showToast(t('unlock_first')); announce(t('unlock_first'), true); return; }
+  if(!state.auth.user){ showToast('Sign in first.', true); return; }
+  showToast('Looking for "'+cmd.namePart+'"…');
+  let users = [];
+  try{ users = await api.getDemoUsers(); }catch(e){ showToast('BraillePay server is unavailable.', true); return; }
+  const match = users.find(u =>
+    u.username.toLowerCase() === cmd.namePart ||
+    u.name.toLowerCase().split(' ')[0] === cmd.namePart ||
+    u.name.toLowerCase().includes(cmd.namePart)
+  );
+  if(!match){ showToast('Could not find a demo user named "'+cmd.namePart+'".', true); announce('Could not find that recipient.', true); return; }
+  if(state.auth.user && match.upi_id === state.auth.user.upi_id){ showToast('That\'s your own account.', true); return; }
+
+  showScreen('send'); // runs resetSendFlow()
+  const ok = await resolveRecipientAndContinue(match.upi_id);
+  if(!ok) return;
+  document.getElementById('send-amount-input').value = cmd.amount;
+  document.getElementById('send-continue-amount').click();
+  announce('I found '+match.name+', '+match.upi_id+'. The amount is '+cmd.amount.toLocaleString('en-IN')+' rupees. Say confirm, or press Confirm Payment.', true);
+}
+
 let lastCommandKey = '';
 let lastCommandTime = 0;
 function isDuplicateCommand(key){
@@ -3213,6 +3497,17 @@ function handleCommandText(text){
       showScreen('learning');
     }
     setTimeout(()=>playLearningCharacter(learnCmd.ch), 60); // small delay so the Learning screen/grid is visible first
+    return;
+  }
+  const sendCmd = matchSendMoneyCommand(text);
+  if(sendCmd){
+    if(isDuplicateCommand('send:'+sendCmd.namePart+':'+sendCmd.amount)) return;
+    clearTimeout(commandTimeout);
+    listeningForCommand = false;
+    document.getElementById('voice-indicator-text').textContent = 'Listening for "Hey Braille"…';
+    document.getElementById('voice-fab').classList.remove('on');
+    vibrateExact(50);
+    handleVoiceSendCommand(sendCmd);
     return;
   }
   const cmd = matchCommand(text);
@@ -3461,13 +3756,12 @@ function resetSendFlow(){
   showSendStep('recipient');
   populateSendDemoRecipients();
 }
-document.getElementById('send-continue-recipient').addEventListener('click', async ()=>{
+async function resolveRecipientAndContinue(upiId){
   const btn = document.getElementById('send-continue-recipient');
-  const v = sendRecipientInput.value.trim().toLowerCase();
   const originalLabel = btn.textContent;
   btn.disabled = true; btn.textContent = 'Checking…';
   try{
-    const result = await api.lookupUser(v);
+    const result = await api.lookupUser(upiId);
     state.send.recipient = result.user.upi_id;
     state.send.recipientName = result.user.name;
     state.send.recipientBank = result.bank.name;
@@ -3478,13 +3772,18 @@ document.getElementById('send-continue-recipient').addEventListener('click', asy
     sendRecipientErr.textContent = '';
     document.getElementById('send-balance-display').textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
     showSendStep('amount');
+    return true;
   }catch(e){
     sendRecipientErr.textContent = e.detail || 'Recipient not found.';
     announce(sendRecipientErr.textContent, true);
     document.getElementById('send-recipient-card').hidden = true;
+    return false;
   }finally{
     btn.disabled = false; btn.textContent = originalLabel;
   }
+}
+document.getElementById('send-continue-recipient').addEventListener('click', ()=>{
+  resolveRecipientAndContinue(sendRecipientInput.value.trim().toLowerCase());
 });
 document.getElementById('send-amount-input').addEventListener('input', ()=>{ document.getElementById('send-amount-error').textContent=''; });
 document.getElementById('send-continue-amount').addEventListener('click', ()=>{
@@ -3659,6 +3958,11 @@ showScreen = function(name, opts){
   if(name === 'send' && !state.auth.unlocked){ showToast(t('unlock_first')); return; }
   if(name === 'send') resetSendFlow();
   if(name === 'balance') renderBalanceScreen();
+  if(name === 'receive') loadReceiveScreen();
+  if(name === 'requests') loadRequestsScreen();
+  if(name === 'banks') loadBanksScreen();
+  if(name === 'notifications') loadNotificationsScreen();
+  if(name === 'admin') loadAdminScreen();
   if(name === 'learning'){
     const alreadyThere = document.getElementById('screen-learning').classList.contains('active');
     originalShowScreen(name, opts);
@@ -3683,7 +3987,8 @@ showScreen = function(name, opts){
    project README) — for local development the default below
    matches `uvicorn app.main:app --port 8000`.
    ============================================================ */
-const API_BASE_URL = (window.APP_CONFIG && window.APP_CONFIG.API_URL) || window.BRAILLEPAY_API_BASE_URL || 'https://braillepay-production.up.railway.app';
+const API_BASE_URL = window.BRAILLEPAY_API_BASE_URL || 'http://localhost:8000';
+const TOKEN_KEY = 'braillepay_session_token';
 
 function getToken(){ try{ return sessionStorage.getItem(TOKEN_KEY); }catch(e){ return null; } }
 function setToken(tok){
@@ -3740,6 +4045,8 @@ const api = {
   getMe: () => apiRequest('/api/auth/me'),
   getDemoUsers: () => apiRequest('/api/auth/demo-users', { auth:false }),
   getBalance: () => apiRequest('/api/accounts/balance'),
+  getBanks: () => apiRequest('/api/banks', { auth:false }),
+  getDemoStats: () => apiRequest('/api/demo/stats', { auth:false }),
   lookupUser: (upiId) => apiRequest('/api/users/lookup?upi_id='+encodeURIComponent(upiId)),
   sendPayment: (receiverUpi, amount, note, idempotencyKey) => apiRequest('/api/payments/send', {
     method:'POST',
@@ -3760,7 +4067,11 @@ const api = {
   declinePaymentRequest: (id) => apiRequest('/api/payment-requests/'+encodeURIComponent(id)+'/decline', { method:'POST' }),
   getNotifications: () => apiRequest('/api/notifications'),
   markNotificationRead: (id) => apiRequest('/api/notifications/'+encodeURIComponent(id)+'/read', { method:'POST' }),
-  resetDemo: () => apiRequest('/api/demo/reset', { method:'POST', auth:false })
+  resetDemo: () => apiRequest('/api/demo/reset', { method:'POST', auth:false }),
+  webauthnRegisterOptions: () => apiRequest('/api/webauthn/register/options', { method:'POST' }),
+  webauthnRegisterVerify: (credential) => apiRequest('/api/webauthn/register/verify', { method:'POST', body:{ credential } }),
+  webauthnLoginOptions: (username) => apiRequest('/api/webauthn/login/options', { method:'POST', auth:false, body:{ username } }),
+  webauthnLoginVerify: (credential) => apiRequest('/api/webauthn/login/verify', { method:'POST', auth:false, body:{ credential } })
 };
 
 function handleSessionExpired(){
@@ -3817,6 +4128,8 @@ async function refreshAccountData(){
     state.transactions = txResp.items.map(mapBackendTx);
   }catch(e){ /* history just stays as last known */ }
   renderHomeGreeting();
+  refreshNotificationBadge();
+  checkAdminAvailable();
   const balScreen = document.getElementById('screen-balance');
   if(balScreen && balScreen.classList.contains('active')) renderBalanceScreen();
 }
@@ -3896,6 +4209,397 @@ async function tryRestoreSession(){
     return false;
   }
 }
+
+/* ============================================================
+   SERVER-SIDE WEBAUTHN (Part 25)
+   Distinct from the pre-existing LOCAL device lock above (which
+   never talks to a server). This registers/verifies a real
+   platform authenticator against the BraillePay backend.
+   ============================================================ */
+function base64urlToBuffer(base64url){
+  const padding = '='.repeat((4 - (base64url.length % 4)) % 4);
+  const base64 = (base64url + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const buffer = new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) buffer[i] = raw.charCodeAt(i);
+  return buffer.buffer;
+}
+function bufferToBase64url(buffer){
+  const bytes = new Uint8Array(buffer);
+  let str = '';
+  for(let i=0;i<bytes.length;i++) str += String.fromCharCode(bytes[i]);
+  return btoa(str).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function prepareCreationOptions(opts){
+  opts.challenge = base64urlToBuffer(opts.challenge);
+  opts.user.id = base64urlToBuffer(opts.user.id);
+  if(opts.excludeCredentials){
+    opts.excludeCredentials = opts.excludeCredentials.map(c => Object.assign({}, c, { id: base64urlToBuffer(c.id) }));
+  }
+  return opts;
+}
+function prepareRequestOptions(opts){
+  opts.challenge = base64urlToBuffer(opts.challenge);
+  if(opts.allowCredentials){
+    opts.allowCredentials = opts.allowCredentials.map(c => Object.assign({}, c, { id: base64urlToBuffer(c.id) }));
+  }
+  return opts;
+}
+function credentialToJSON(cred){
+  if(cred.response.attestationObject){
+    return {
+      id: cred.id, rawId: bufferToBase64url(cred.rawId), type: cred.type,
+      response: {
+        clientDataJSON: bufferToBase64url(cred.response.clientDataJSON),
+        attestationObject: bufferToBase64url(cred.response.attestationObject),
+        transports: cred.response.getTransports ? cred.response.getTransports() : []
+      }
+    };
+  }
+  return {
+    id: cred.id, rawId: bufferToBase64url(cred.rawId), type: cred.type,
+    response: {
+      clientDataJSON: bufferToBase64url(cred.response.clientDataJSON),
+      authenticatorData: bufferToBase64url(cred.response.authenticatorData),
+      signature: bufferToBase64url(cred.response.signature),
+      userHandle: cred.response.userHandle ? bufferToBase64url(cred.response.userHandle) : null
+    }
+  };
+}
+async function registerPasskey(){
+  const statusEl = document.getElementById('settings-passkey-status');
+  if(!window.PublicKeyCredential){ showToast('This browser does not support WebAuthn.', true); return; }
+  if(!state.auth.user){ showToast('Sign in first.', true); return; }
+  const btn = document.getElementById('settings-register-passkey-btn');
+  btn.disabled = true; btn.textContent = 'Registering…';
+  try{
+    const optionsJson = await api.webauthnRegisterOptions();
+    const publicKey = prepareCreationOptions(optionsJson);
+    const cred = await navigator.credentials.create({ publicKey });
+    if(!cred) throw new Error('cancelled');
+    await api.webauthnRegisterVerify(credentialToJSON(cred));
+    statusEl.textContent = 'Passkey registered on this device.';
+    showToast('Passkey registered.');
+    announce('Passkey registered for this device.', true);
+  }catch(e){
+    const msg = (e && e.detail) ? e.detail : 'Could not register a passkey on this device.';
+    statusEl.textContent = msg;
+    showToast(msg, true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Register passkey';
+  }
+}
+document.getElementById('settings-register-passkey-btn').addEventListener('click', registerPasskey);
+
+async function loginWithPasskey(){
+  const username = document.getElementById('login-username-input').value.trim();
+  const errEl = document.getElementById('login-error');
+  errEl.textContent = '';
+  if(!username){ errEl.textContent = 'Enter your username first, then use a passkey.'; return; }
+  if(!window.PublicKeyCredential){ errEl.textContent = 'This browser does not support passkeys.'; return; }
+  const btn = document.getElementById('login-passkey-btn');
+  btn.disabled = true; btn.textContent = 'Waiting for passkey…';
+  try{
+    const optionsJson = await api.webauthnLoginOptions(username);
+    const publicKey = prepareRequestOptions(optionsJson);
+    const assertion = await navigator.credentials.get({ publicKey });
+    if(!assertion) throw new Error('cancelled');
+    const resp = await api.webauthnLoginVerify(credentialToJSON(assertion));
+    setToken(resp.access_token);
+    state.auth.user = resp.user;
+    await refreshAccountData();
+    await populateSendDemoRecipients();
+    announce('Signed in with passkey as '+resp.user.name, true);
+    showScreen('home');
+  }catch(e){
+    errEl.textContent = (e && e.detail) ? e.detail : 'Passkey sign-in failed — you can still sign in with your PIN.';
+    announce(errEl.textContent, true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Use a passkey instead';
+  }
+}
+document.getElementById('login-passkey-btn').addEventListener('click', loginWithPasskey);
+
+/* ============================================================
+   RECEIVE MONEY
+   ============================================================ */
+async function loadReceiveScreen(){
+  const nameEl = document.getElementById('receive-name');
+  const upiEl = document.getElementById('receive-upi');
+  const bankEl = document.getElementById('receive-bank');
+  const imgEl = document.getElementById('receive-qr-img');
+  if(state.auth.user){
+    nameEl.textContent = state.auth.user.name;
+    upiEl.textContent = state.auth.user.upi_id;
+  }
+  try{
+    const qr = await api.getMyQR();
+    if(qr.image_base64) imgEl.src = 'data:image/png;base64,'+qr.image_base64;
+    nameEl.textContent = qr.payload.name || nameEl.textContent;
+    upiEl.textContent = qr.upi_id;
+  }catch(e){ /* QR image just won't render if the backend is unreachable */ }
+  try{
+    const bal = await api.getBalance();
+    bankEl.textContent = bal.bank.name + ' · ' + bal.account.status;
+  }catch(e){ bankEl.textContent = ''; }
+}
+document.getElementById('receive-copy-upi').addEventListener('click', async ()=>{
+  const upi = document.getElementById('receive-upi').textContent;
+  try{ await navigator.clipboard.writeText(upi); showToast('UPI ID copied.'); announce('UPI ID copied to clipboard.'); }
+  catch(e){ showToast('Could not copy — select and copy manually: '+upi, true); }
+});
+document.getElementById('receive-download-qr').addEventListener('click', ()=>{
+  const img = document.getElementById('receive-qr-img');
+  if(!img.src){ showToast('QR not loaded yet.', true); return; }
+  const a = document.createElement('a');
+  a.href = img.src;
+  a.download = 'braillepay-qr-'+(state.auth.user ? state.auth.user.username : 'demo')+'.png';
+  document.body.appendChild(a); a.click(); a.remove();
+});
+document.getElementById('receive-share-qr').addEventListener('click', async ()=>{
+  const upi = document.getElementById('receive-upi').textContent;
+  const shareText = 'Send me a simulated BraillePay payment to '+upi;
+  if(navigator.share){
+    try{ await navigator.share({ title:'BraillePay', text: shareText }); }catch(e){ /* user cancelled */ }
+  }else{
+    try{ await navigator.clipboard.writeText(shareText); showToast('Share text copied.'); }
+    catch(e){ showToast(shareText); }
+  }
+});
+
+/* ============================================================
+   PAYMENT REQUESTS
+   ============================================================ */
+function renderRequestRow(req, kind){
+  const row = document.createElement('div');
+  row.className = 'summary-card';
+  row.style.marginBottom = '10px';
+  const other = kind === 'incoming' ? req.requester_name : req.payer_name;
+  const otherUpi = kind === 'incoming' ? req.requester_upi : req.payer_upi;
+  row.innerHTML =
+    '<div class="summary-row"><span>'+other+'</span><b>₹'+Number(req.amount).toLocaleString('en-IN')+'</b></div>'+
+    '<div class="summary-row"><span>'+otherUpi+'</span><span>'+req.status+'</span></div>'+
+    (req.note ? ('<div class="summary-row"><span>Note</span><span>'+req.note+'</span></div>') : '');
+  if(kind === 'incoming' && req.status === 'PENDING'){
+    const btnRow = document.createElement('div');
+    btnRow.className = 'btn-row';
+    const payBtn = document.createElement('button');
+    payBtn.className = 'btn btn-primary'; payBtn.textContent = 'Pay';
+    payBtn.addEventListener('click', async ()=>{
+      payBtn.disabled = true; payBtn.textContent = 'Paying…';
+      try{
+        await api.payPaymentRequest(req.request_id);
+        showToast('Paid ₹'+Number(req.amount).toLocaleString('en-IN')+' to '+other+'.');
+        announce('Payment request paid.', true);
+        await refreshAccountData();
+        await loadRequestsScreen();
+      }catch(e){
+        showToast(e.detail || 'Could not pay this request.', true);
+        payBtn.disabled = false; payBtn.textContent = 'Pay';
+      }
+    });
+    const declineBtn = document.createElement('button');
+    declineBtn.className = 'btn btn-secondary'; declineBtn.textContent = 'Decline';
+    declineBtn.addEventListener('click', async ()=>{
+      declineBtn.disabled = true;
+      try{ await api.declinePaymentRequest(req.request_id); showToast('Request declined.'); await loadRequestsScreen(); }
+      catch(e){ showToast(e.detail || 'Could not decline this request.', true); declineBtn.disabled = false; }
+    });
+    btnRow.appendChild(payBtn); btnRow.appendChild(declineBtn);
+    row.appendChild(btnRow);
+  }
+  return row;
+}
+async function loadRequestsScreen(){
+  const incomingEl = document.getElementById('req-incoming-list');
+  const outgoingEl = document.getElementById('req-outgoing-list');
+  incomingEl.innerHTML = '<p class="cell-caption">Loading…</p>';
+  outgoingEl.innerHTML = '<p class="cell-caption">Loading…</p>';
+  try{
+    const [incoming, outgoing] = await Promise.all([
+      api.getPaymentRequests('incoming'), api.getPaymentRequests('outgoing')
+    ]);
+    incomingEl.innerHTML = '';
+    if(!incoming.length) incomingEl.innerHTML = '<p class="cell-caption">Nothing waiting on you.</p>';
+    incoming.forEach(r => incomingEl.appendChild(renderRequestRow(r, 'incoming')));
+    outgoingEl.innerHTML = '';
+    if(!outgoing.length) outgoingEl.innerHTML = '<p class="cell-caption">You haven\'t requested anything.</p>';
+    outgoing.forEach(r => outgoingEl.appendChild(renderRequestRow(r, 'outgoing')));
+  }catch(e){
+    incomingEl.innerHTML = '<p class="cell-caption" style="color:var(--danger);">Could not load requests.</p>';
+    outgoingEl.innerHTML = '';
+  }
+  populateRequestDemoPayers();
+}
+async function populateRequestDemoPayers(){
+  const row = document.getElementById('req-demo-payers');
+  row.innerHTML = '';
+  try{
+    const users = await api.getDemoUsers();
+    users.filter(u => !state.auth.user || u.upi_id !== state.auth.user.upi_id).forEach(u=>{
+      const chip = document.createElement('button');
+      chip.className = 'preset-chip'; chip.type = 'button'; chip.textContent = u.upi_id;
+      chip.addEventListener('click', ()=>{ document.getElementById('req-payer-input').value = u.upi_id; });
+      row.appendChild(chip);
+    });
+  }catch(e){ /* picker just stays empty */ }
+}
+document.getElementById('req-create-btn').addEventListener('click', async ()=>{
+  const payer = document.getElementById('req-payer-input').value.trim().toLowerCase();
+  const amount = parseFloat(document.getElementById('req-amount-input').value);
+  const note = document.getElementById('req-note-input').value.trim();
+  const errEl = document.getElementById('req-create-error');
+  errEl.textContent = '';
+  if(!payer){ errEl.textContent = 'Enter a UPI ID to request from.'; return; }
+  if(!amount || amount <= 0){ errEl.textContent = 'Enter an amount greater than ₹0.'; return; }
+  const btn = document.getElementById('req-create-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try{
+    await api.createPaymentRequest(payer, amount, note);
+    document.getElementById('req-payer-input').value = '';
+    document.getElementById('req-amount-input').value = '';
+    document.getElementById('req-note-input').value = '';
+    showToast('Request sent.');
+    announce('Payment request sent.', true);
+    await loadRequestsScreen();
+  }catch(e){
+    errEl.textContent = e.detail || 'Could not send this request.';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Send request';
+  }
+});
+
+/* ============================================================
+   BANKS
+   ============================================================ */
+async function loadBanksScreen(){
+  const el = document.getElementById('banks-list');
+  el.innerHTML = '<p class="cell-caption">Loading…</p>';
+  try{
+    const banks = await api.getBanks();
+    el.innerHTML = '';
+    banks.forEach(b=>{
+      const row = document.createElement('div');
+      row.className = 'summary-card';
+      row.style.marginBottom = '10px';
+      row.innerHTML =
+        '<div class="summary-row"><span style="font-weight:700;">'+b.bank.name+'</span><span class="category-chip">DEMO BANK</span></div>'+
+        '<div class="summary-row"><span>Code</span><span>'+b.bank.code+'</span></div>'+
+        '<div class="summary-row"><span>IFSC</span><span>'+b.bank.ifsc+'</span></div>'+
+        '<div class="summary-row"><span>Demo accounts</span><span>'+b.account_count+'</span></div>'+
+        '<div class="summary-row"><span>Simulated volume moved</span><span>₹'+Number(b.total_transaction_volume).toLocaleString('en-IN')+'</span></div>';
+      el.appendChild(row);
+    });
+  }catch(e){
+    el.innerHTML = '<p class="cell-caption" style="color:var(--danger);">Could not load banks — is the BraillePay server running?</p>';
+  }
+}
+
+/* ============================================================
+   NOTIFICATIONS
+   ============================================================ */
+async function refreshNotificationBadge(){
+  const sub = document.getElementById('home-notif-sub');
+  if(!sub) return;
+  try{
+    const resp = await api.getNotifications();
+    sub.textContent = resp.unread_count > 0 ? (resp.unread_count+' unread') : 'All caught up';
+  }catch(e){ /* badge just won't update if unreachable */ }
+}
+async function loadNotificationsScreen(){
+  const el = document.getElementById('notif-list');
+  el.innerHTML = '<p class="cell-caption">Loading…</p>';
+  try{
+    const resp = await api.getNotifications();
+    document.getElementById('notif-screen-sub').textContent =
+      resp.unread_count > 0 ? (resp.unread_count+' unread notification'+(resp.unread_count===1?'':'s')) : 'All caught up';
+    el.innerHTML = '';
+    if(!resp.items.length){ el.innerHTML = '<p class="cell-caption">No notifications yet.</p>'; return; }
+    resp.items.forEach(n=>{
+      const row = document.createElement('div');
+      row.className = 'summary-card';
+      row.style.marginBottom = '10px';
+      if(!n.read) row.style.borderColor = 'var(--accent)';
+      row.innerHTML =
+        '<div class="summary-row"><span style="font-weight:700;">'+n.title+'</span><span class="cell-caption">'+new Date(n.created_at).toLocaleString([], {dateStyle:'medium', timeStyle:'short'})+'</span></div>'+
+        '<div class="summary-row"><span>'+n.message+'</span></div>';
+      if(!n.read){
+        const btnRow = document.createElement('div');
+        btnRow.className = 'btn-row';
+        const readBtn = document.createElement('button');
+        readBtn.className = 'btn btn-ghost btn-sm'; readBtn.textContent = 'Mark read';
+        readBtn.addEventListener('click', async ()=>{
+          readBtn.disabled = true;
+          try{ await api.markNotificationRead(n.notification_id); await loadNotificationsScreen(); await refreshNotificationBadge(); }
+          catch(e){ readBtn.disabled = false; }
+        });
+        btnRow.appendChild(readBtn);
+        row.appendChild(btnRow);
+      }
+      el.appendChild(row);
+    });
+  }catch(e){
+    el.innerHTML = '<p class="cell-caption" style="color:var(--danger);">Could not load notifications.</p>';
+  }
+}
+
+/* ============================================================
+   DEMO ADMIN DASHBOARD (Part 34) — demo-mode only; the nav card
+   stays hidden until we confirm the backend actually exposes it.
+   ============================================================ */
+async function checkAdminAvailable(){
+  try{
+    await api.getDemoStats();
+    const card = document.getElementById('nav-card-admin');
+    if(card) card.hidden = false;
+  }catch(e){ /* not in demo mode, or backend unreachable — card stays hidden */ }
+}
+async function loadAdminScreen(){
+  const statsEl = document.getElementById('admin-stats');
+  const txEl = document.getElementById('admin-recent-tx');
+  statsEl.innerHTML = '<p class="cell-caption">Loading…</p>';
+  txEl.innerHTML = '';
+  try{
+    const s = await api.getDemoStats();
+    statsEl.innerHTML =
+      '<div class="summary-card">'+
+      '<div class="summary-row"><span>Total users</span><b>'+s.total_users+'</b></div>'+
+      '<div class="summary-row"><span>Total banks</span><b>'+s.total_banks+'</b></div>'+
+      '<div class="summary-row"><span>Total demo balance</span><b>₹'+Number(s.total_demo_balance).toLocaleString('en-IN')+'</b></div>'+
+      '<div class="summary-row"><span>Total transactions</span><b>'+s.total_transactions+'</b></div>'+
+      '<div class="summary-row"><span>Successful payments</span><b>'+s.successful_payments+'</b></div>'+
+      '<div class="summary-row"><span>Failed payments</span><b>'+s.failed_payments+'</b></div>'+
+      '<div class="summary-row"><span>Total money moved</span><b>₹'+Number(s.total_money_sent).toLocaleString('en-IN')+'</b></div>'+
+      '</div>';
+    s.recent_transactions.forEach(tx=>{
+      const row = document.createElement('div');
+      row.className = 'summary-card';
+      row.style.marginBottom = '10px';
+      row.innerHTML =
+        '<div class="summary-row"><span>'+tx.sender_upi+' → '+tx.receiver_upi+'</span><b>₹'+Number(tx.amount).toLocaleString('en-IN')+'</b></div>'+
+        '<div class="summary-row"><span>'+tx.type+'</span><span>'+tx.status+'</span></div>';
+      txEl.appendChild(row);
+    });
+  }catch(e){
+    statsEl.innerHTML = '<p class="cell-caption" style="color:var(--danger);">Demo dashboard is unavailable (not in demo mode, or the server is unreachable).</p>';
+  }
+}
+document.getElementById('admin-reset-btn').addEventListener('click', async ()=>{
+  if(!confirm('Reset all demo accounts and transactions?')) return;
+  const btn = document.getElementById('admin-reset-btn');
+  btn.disabled = true; btn.textContent = 'Resetting…';
+  try{
+    await api.resetDemo();
+    showToast('Demo data reset.');
+    announce('Demo data has been reset.', true);
+    await refreshAccountData();
+    await loadAdminScreen();
+  }catch(e){
+    showToast(e.detail || 'Could not reset demo data.', true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Reset Demo Data';
+  }
+});
 
 /* ============================================================
    INIT — every step runs in isolation. A failure in any one
