@@ -9,6 +9,7 @@ from app.routes import accounts as account_routes
 from app.routes import auth as auth_routes
 from app.routes import demo as demo_routes
 from app.routes import notifications as notification_routes
+from app.routes import payment_requests as payment_request_routes
 from app.routes import payments as payment_routes
 from app.routes import qr as qr_routes
 from app.routes import transactions as transaction_routes
