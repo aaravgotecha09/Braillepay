@@ -20,12 +20,12 @@ BANKS = [
 
 # username, full name, pin, upi id, starting balance, bank_id
 USERS = [
-    ("aarav", "Aarav Gotecha", "0109", "aarav@braillepay", 25000.00, "bank_bnb"),
-    ("anushka", "Anushka Pawar", "1611", "anushka@braillepay", 25000.00, "bank_adb"),
-    ("shreya", "Shreya Bhuia", "0604", "shreya@braillepay", 25000.00, "bank_bnb"),
-    ("diva", "Diva Bafna", "1009", "diva@braillepay", 25000.00, "bank_adb"),
-    ("archi", "Archi Salaot", "2601", "archi@braillepay", 25000.00, "bank_bnb"),
-    ("nitin", "Nitin Gupta", "2010", "nitin@braillepay", 25000.00, "bank_adb"),
+    ("aarav", "Aarav Gotecha", "1234", "aarav@braillepay", 25000.00, "bank_bnb"),
+    ("anushka", "Anushka Pawar", "1234", "anushka@braillepay", 25000.00, "bank_adb"),
+    ("shreya", "Shreya Bhuia", "1234", "shreya@braillepay", 25000.00, "bank_bnb"),
+    ("diva", "Diva Bafna", "1234", "diva@braillepay", 25000.00, "bank_adb"),
+    ("archi", "Archi Salaot", "1234", "archi@braillepay", 25000.00, "bank_bnb"),
+    ("nitin", "Nitin Gupta", "1234", "nitin@braillepay", 25000.00, "bank_adb"),
 ]
 
 # sender_username, receiver_username, amount, note, days_ago
