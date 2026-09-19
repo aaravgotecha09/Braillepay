@@ -13,30 +13,28 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.security import hash_pin
 from app.services import notification_service
 
-DEMO_PIN = "1234"
-
 BANKS = [
     {"bank_id": "bank_bnb", "name": "Braille National Bank", "code": "BNB", "ifsc": "BRLP000001"},
     {"bank_id": "bank_adb", "name": "Accessible Digital Bank", "code": "ADB", "ifsc": "BRLP000002"},
 ]
 
-# username, full name, upi id, starting balance, bank_id
+# username, full name, pin, upi id, starting balance, bank_id
 USERS = [
-    ("aarav", "Aarav Gotecha", "aarav@braillepay", 25000.00, "bank_bnb"),
-    ("shivani", "Shivani Mehta", "shivani@braillepay", 18500.00, "bank_bnb"),
-    ("rahul", "Rahul Shah", "rahul@braillepay", 32000.00, "bank_bnb"),
-    ("priya", "Priya Desai", "priya@braillepay", 21750.00, "bank_adb"),
-    ("rohan", "Rohan Patel", "rohan@braillepay", 15200.00, "bank_adb"),
-    ("ananya", "Ananya Kapoor", "ananya@braillepay", 28400.00, "bank_adb"),
+    ("aarav", "Aarav Gotecha", "0109", "aarav@braillepay", 25000.00, "bank_bnb"),
+    ("anushka", "Anushka Pawar", "1611", "anushka@braillepay", 25000.00, "bank_adb"),
+    ("shreya", "Shreya Bhuia", "0604", "shreya@braillepay", 25000.00, "bank_bnb"),
+    ("diva", "Diva Bafna", "1009", "diva@braillepay", 25000.00, "bank_adb"),
+    ("archi", "Archi Salaot", "2601", "archi@braillepay", 25000.00, "bank_bnb"),
+    ("nitin", "Nitin Gupta", "2010", "nitin@braillepay", 25000.00, "bank_adb"),
 ]
 
 # sender_username, receiver_username, amount, note, days_ago
 SAMPLE_TRANSACTIONS = [
-    ("aarav", "shivani", 500.00, "Lunch split", 3),
-    ("rahul", "aarav", 750.00, "Movie tickets", 2),
-    ("priya", "aarav", 250.00, "Book refund", 2),
-    ("aarav", "rohan", 1000.00, "Rent share", 1),
-    ("ananya", "aarav", 300.00, "Coffee", 0),
+    ("aarav", "anushka", 500.00, "Lunch split", 3),
+    ("shreya", "aarav", 750.00, "Movie tickets", 2),
+    ("diva", "aarav", 250.00, "Book refund", 2),
+    ("aarav", "archi", 1000.00, "Rent share", 1),
+    ("nitin", "aarav", 300.00, "Coffee", 0),
 ]
 
 
@@ -68,7 +66,7 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
     bank_seq = {"bank_bnb": 0, "bank_adb": 0}
     bank_code = {b["bank_id"]: b["code"] for b in BANKS}
 
-    for username, name, upi_id, balance, bank_id in USERS:
+    for username, name, pin, upi_id, balance, bank_id in USERS:
         uid = user_id_for(username)
 
         await db.users.update_one(
@@ -79,7 +77,7 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
                     "username": username,
                     "name": name,
                     "upi_id": upi_id,
-                    "pin_hash": hash_pin(DEMO_PIN),
+                    "pin_hash": hash_pin(pin),
                     "demo": True,
                     "created_at": now,
                 }
@@ -154,12 +152,12 @@ async def seed_sample_transactions(db: AsyncIOMotorDatabase, *, with_notificatio
                     "reference_id": ref_id,
                     "sender_user_id": user_id_for(sender),
                     "receiver_user_id": user_id_for(receiver),
-                    "sender_upi": sender_row[2],
-                    "receiver_upi": receiver_row[2],
+                    "sender_upi": sender_row[3],
+                    "receiver_upi": receiver_row[3],
                     "sender_account_id": account_id_for(sender),
                     "receiver_account_id": account_id_for(receiver),
-                    "sender_bank_id": sender_row[4],
-                    "receiver_bank_id": receiver_row[4],
+                    "sender_bank_id": sender_row[5],
+                    "receiver_bank_id": receiver_row[5],
                     "amount": d128(amount),
                     "currency": "INR",
                     "note": note,
