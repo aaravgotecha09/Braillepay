@@ -13,9 +13,6 @@ from app.models import (
 )
 from app.security import (
     create_access_token,
-    raise_if_locked,
-    register_failed_attempt,
-    reset_failed_attempts,
     revoke_token,
     verify_pin,
 )
@@ -29,28 +26,21 @@ settings = get_settings()
     response_model=LoginResponse,
     responses={
         401: {"description": "Invalid username or PIN"},
-        423: {"description": "Account temporarily locked"},
     },
 )
 async def login(body: LoginRequest):
     """Authenticate a demo user with username + PIN and issue a JWT.
 
-    PINs are never stored or compared in plaintext (bcrypt), and repeated
-    failed attempts lock the account for a cooldown period.
+    PINs are never stored or compared in plaintext (bcrypt).
     """
-    await raise_if_locked(body.username)
-
     db = get_db()
     user = await db.users.find_one({"username": body.username})
 
     if not user or not verify_pin(body.pin, user["pin_hash"]):
-        await register_failed_attempt(body.username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or PIN",
         )
-
-    await reset_failed_attempts(body.username)
 
     token, _jti, expires_at = create_access_token(user["user_id"], user["username"])
 
