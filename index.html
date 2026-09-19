@@ -3987,7 +3987,7 @@ showScreen = function(name, opts){
    project README) — for local development the default below
    matches `uvicorn app.main:app --port 8000`.
    ============================================================ */
-const API_BASE_URL = window.BRAILLEPAY_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = window.BRAILLEPAY_API_BASE_URL || 'https://braillepay-production.up.railway.app';
 const TOKEN_KEY = 'braillepay_session_token';
 
 function getToken(){ try{ return sessionStorage.getItem(TOKEN_KEY); }catch(e){ return null; } }
