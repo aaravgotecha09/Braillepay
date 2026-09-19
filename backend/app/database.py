@@ -5,6 +5,7 @@ This is the single source of truth for DB access. All money-related state
 (users, accounts, transactions, ...) lives here — never in the frontend.
 """
 import logging
+import certifi
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
@@ -21,7 +22,7 @@ _db: AsyncIOMotorDatabase | None = None
 def get_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
-        _client = AsyncIOMotorClient(settings.mongo_url)
+        _client = AsyncIOMotorClient(settings.mongo_url, tlsCAFile=certifi.where())
     return _client
 
 
