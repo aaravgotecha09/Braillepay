@@ -66,6 +66,12 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
     bank_seq = {"bank_bnb": 0, "bank_adb": 0}
     bank_code = {b["bank_id"]: b["code"] for b in BANKS}
 
+    # Clear stale demo records if not explicitly performing a balance reset
+    if not reset_balances:
+        await db.users.delete_many({"demo": True})
+        await db.accounts.delete_many({})
+        await db.qr_codes.delete_many({})
+
     for username, name, pin, upi_id, balance, bank_id in USERS:
         uid = user_id_for(username)
 
@@ -89,7 +95,6 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
         account_number = f"{bank_code[bank_id]}{str(bank_seq[bank_id]).zfill(9)}"
         acct_id = account_id_for(username)
 
-        # Use update_one with upsert=True to prevent duplicate key errors on restart
         await db.accounts.update_one(
             {"account_id": acct_id},
             {
@@ -107,6 +112,7 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
             },
             upsert=True,
         )
+
         if reset_balances:
             await db.accounts.update_one(
                 {"account_id": acct_id}, {"$set": {"balance": d128(balance)}}
