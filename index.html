@@ -412,7 +412,25 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
     <div class="screens">
 
       <!-- ============ SPLASH ============ -->
-      <section class="screen active" id="screen-splash" aria-label="Splash screen">
+      <section class="screen active" id="screen-login" aria-label="Sign in">
+        <div class="screen-header" style="justify-content:center;">
+          <div><div class="screen-title">BraillePay</div><div class="screen-sub">Sign in to your demo account</div></div>
+        </div>
+        <div class="verify-banner"><span class="dot-live"></span> Demo login — six seeded accounts, PIN 1234 for all</div>
+
+        <div class="setting-label" style="margin-bottom:8px;"><b>Username</b></div>
+        <input class="search-input" id="login-username-input" type="text" placeholder="aarav" autocomplete="username" aria-label="Username">
+        <div class="setting-label" style="margin:12px 0 6px;"><b>PIN</b></div>
+        <input class="search-input" id="login-pin-input" type="password" inputmode="numeric" maxlength="12" placeholder="1234" autocomplete="current-password" aria-label="PIN">
+        <div id="login-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;" aria-live="assertive"></div>
+        <div class="btn-row"><button class="btn btn-primary" id="login-submit-btn">Sign in</button></div>
+
+        <h3 style="margin:18px 0 8px;font-size:14px;">Demo accounts</h3>
+        <div class="preset-row" id="login-demo-users"></div>
+        <div class="disclaimer">BraillePay is a simulated payment environment. It does not process real money or connect to real banking infrastructure, UPI, NPCI, or any bank.</div>
+      </section>
+
+      <section class="screen" id="screen-splash" aria-label="Splash screen">
         <div class="splash-logo" id="splash-cells" aria-hidden="true"></div>
         <h1 class="brand-title">BraillePay</h1>
         <p class="brand-tag" data-i18n="splash_tag">A blind-friendly way to verify what a QR code says — through sound and touch, never by giving away the answer.</p>
@@ -426,6 +444,10 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div class="home-hero">
           <h1 id="main-heading" data-i18n="home_hello">Hello 👋</h1>
           <p data-i18n="home_intro">Scan a QR code and BraillePay will let you feel and hear its pattern — one character at a time — without ever spoiling what it says.</p>
+          <div class="summary-card" id="home-balance-card" style="text-align:center;margin:12px 0;">
+            <div class="cell-caption">Available balance</div>
+            <div id="home-balance-line" style="font-family:var(--font-display);font-size:24px;font-weight:700;">₹0</div>
+          </div>
           <div class="hero-cells" id="hero-cells" aria-hidden="true"></div>
         </div>
 
@@ -685,6 +707,11 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         </div>
 
         <div class="setting-row">
+          <div class="setting-label"><b>Account</b><span id="settings-account-line">Not signed in</span></div>
+          <button class="btn btn-secondary btn-sm" id="settings-signout-btn">Sign out</button>
+        </div>
+
+        <div class="setting-row">
           <div class="setting-label"><b data-i18n="settings_speech">Voice announcements</b><span data-i18n="settings_speech_sub">Speaks category names and prompts aloud</span></div>
           <label class="switch"><input type="checkbox" id="set-speech" checked><span class="track"></span><span class="thumb"></span></label>
         </div>
@@ -817,14 +844,10 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
         <div class="verify-banner"><span class="dot-live"></span> <span data-i18n="send_banner">Demo payment — no real money moves, no bank or UPI network involved</span></div>
 
         <div id="send-step-recipient">
-          <div class="setting-label" style="margin-bottom:8px;"><b data-i18n="send_upi_label">UPI ID or mobile number</b></div>
-          <input class="search-input" id="send-recipient-input" type="text" placeholder="rahul@upi or 9876543210" aria-label="UPI ID or mobile number" autocomplete="off">
+          <div class="setting-label" style="margin-bottom:8px;"><b>Recipient UPI ID</b></div>
+          <input class="search-input" id="send-recipient-input" type="text" placeholder="shivani@braillepay" aria-label="Recipient UPI ID" autocomplete="off">
           <div id="send-recipient-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;"></div>
-          <div class="preset-row">
-            <button class="preset-chip" data-fill="rahul@upi">rahul@upi</button>
-            <button class="preset-chip" data-fill="merchant123@ybl">merchant123@ybl</button>
-            <button class="preset-chip" data-fill="9876543210">9876543210</button>
-          </div>
+          <div class="preset-row" id="send-demo-recipients"></div>
           <div id="send-recipient-card" hidden class="summary-card" style="margin-top:14px;">
             <div class="summary-row"><span data-i18n="send_recipient">Recipient</span><b id="rp-name"></b></div>
             <div class="summary-row"><span data-i18n="send_upi_id">UPI ID</span><b id="rp-upi"></b></div>
@@ -910,7 +933,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
       <section class="screen" id="screen-balance" aria-label="Balance and transactions">
         <div class="screen-header">
           <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
-          <div><div class="screen-title" data-i18n="balance_title">Balance &amp; Transactions</div><div class="screen-sub" data-i18n="balance_sub">Demo account — resets on reload</div></div>
+          <div><div class="screen-title" data-i18n="balance_title">Balance &amp; Transactions</div><div class="screen-sub">Simulated BraillePay account — stored on the demo server</div></div>
         </div>
         <div class="summary-card" style="text-align:center;">
           <div class="cell-caption" data-i18n="balance_available">Available balance (demo)</div>
@@ -949,6 +972,7 @@ input[type="range"]{ flex:1; accent-color:var(--accent); }
   </div>
 </div>
 
+<script src="config.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsqr/1.4.0/jsQR.js"></script>
 <script>
 (function(){
@@ -1527,11 +1551,11 @@ const state = {
   demo: { cancelled:false, running:false, token:null },
   voiceEnabled: false, autoLock: true,
   language: 'en',
-  auth: { unlocked:false },
+  auth: { unlocked:false, user:null },
   pinHash: null,
-  balance: 25000,
+  balance: 0,
   transactions: [],
-  send: { recipient:'', isUpi:false, isMobile:false, amount:0, note:'' }
+  send: { recipient:'', recipientName:'', recipientBank:'', amount:0, note:'' }
 };
 
 /* ============================================================
@@ -1884,6 +1908,8 @@ function showScreen(name, opts){
   const target = document.getElementById('screen-'+name);
   if(!target) return;
   target.classList.add('active');
+  const tabbar = document.getElementById('tabbar-bottom');
+  if(tabbar) tabbar.style.display = (name === 'login' || name === 'splash') ? 'none' : '';
   document.querySelectorAll('.tabbar-bottom button').forEach(b=>{ b.setAttribute('aria-current', b.dataset.nav === name ? 'true' : 'false'); });
   if(!opts.silent){ const label = t('scr_'+name); announce(label && label !== ('scr_'+name) ? label+t('screen_suffix') : (SCREEN_TITLES[name] ? SCREEN_TITLES[name]+' screen' : '')); }
   const heading = target.querySelector('.screen-title, h1');
@@ -3318,8 +3344,11 @@ function saveState(){
       textSize: state.textSize, intensity: state.intensity, leftHanded: state.leftHanded,
       voiceEnabled: state.voiceEnabled, autoLock: state.autoLock, language: state.language,
       mastered: Array.from(state.mastered), quiz: state.quiz,
-      history: state.history, balance: state.balance, transactions: state.transactions,
+      history: state.history,
       pinHash: state.pinHash
+      // Deliberately NOT persisted here: balance, transactions. Those are
+      // authoritative on the BraillePay backend (Part 30 of the spec) —
+      // localStorage is only for non-sensitive UI preferences.
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }catch(e){ /* storage unavailable — app still works in-memory for this tab */ }
@@ -3332,8 +3361,10 @@ function loadPersisted(){
     Object.assign(state, saved);
     state.mastered = new Set(Array.isArray(saved.mastered) ? saved.mastered : []);
     if(!saved.quiz) state.quiz = { correct:0, total:0, streak:0, currentCh:'', currentCategory:'' };
-    if(typeof saved.balance !== 'number') state.balance = 25000;
-    if(!Array.isArray(saved.transactions)) state.transactions = [];
+    // balance/transactions come from the backend (see refreshAccountData),
+    // never from localStorage — start at a safe default until that call lands.
+    state.balance = 0;
+    state.transactions = [];
     if(!Array.isArray(saved.history)) state.history = [];
   }catch(e){ /* corrupted data — start fresh instead of crashing */ }
 }
@@ -3368,34 +3399,42 @@ document.querySelectorAll('[data-textsize]').forEach(b=>b.addEventListener('clic
    SEND MONEY — validation, demo balance, payment auth gate,
    receipt with generated transaction ID / UTR
    ============================================================ */
-function validateRecipient(v){
+function validateRecipientFormat(v){
   v = (v||'').trim();
   if(!v) return { ok:false, msg:'' };
   const isUpi = /^[a-zA-Z0-9.\-_]{2,64}@[a-zA-Z]{2,64}$/.test(v);
-  const isMobile = /^[6-9]\d{9}$/.test(v);
-  if(isUpi || isMobile) return { ok:true, isUpi, isMobile };
-  return { ok:false, msg:'Enter a valid UPI ID (name@bank) or a 10-digit mobile number starting with 6-9.' };
+  if(isUpi) return { ok:true };
+  return { ok:false, msg:'Enter a valid BraillePay UPI ID, e.g. name@braillepay.' };
 }
 const sendRecipientInput = document.getElementById('send-recipient-input');
 const sendRecipientErr = document.getElementById('send-recipient-error');
 const sendContinueRecipient = document.getElementById('send-continue-recipient');
 function refreshRecipientUI(){
   const v = sendRecipientInput.value;
-  const res = validateRecipient(v);
-  document.getElementById('send-recipient-card').hidden = !res.ok;
+  const res = validateRecipientFormat(v);
+  document.getElementById('send-recipient-card').hidden = true;
   sendContinueRecipient.disabled = !res.ok;
   sendRecipientErr.textContent = (v && !res.ok) ? res.msg : '';
-  if(res.ok){
-    document.getElementById('rp-name').textContent = res.isMobile ? 'Demo Contact' : v.split('@')[0];
-    document.getElementById('rp-upi').textContent = res.isMobile ? (v+'@upi (demo)') : v;
-    document.getElementById('rp-bank').textContent = res.isUpi ? (v.split('@')[1].toUpperCase()+' Bank (demo)') : 'Demo Bank';
-    state.send.recipient = v; state.send.isUpi = res.isUpi; state.send.isMobile = res.isMobile;
-  }
 }
 sendRecipientInput.addEventListener('input', refreshRecipientUI);
-document.querySelectorAll('#screen-send [data-fill]').forEach(chip=>{
-  chip.addEventListener('click', ()=>{ sendRecipientInput.value = chip.dataset.fill; refreshRecipientUI(); sendRecipientInput.focus(); });
-});
+async function populateSendDemoRecipients(){
+  const row = document.getElementById('send-demo-recipients');
+  if(!row) return;
+  row.innerHTML = '';
+  try{
+    const users = await api.getDemoUsers();
+    users
+      .filter(u => !state.auth.user || u.upi_id !== state.auth.user.upi_id)
+      .forEach(u=>{
+        const chip = document.createElement('button');
+        chip.className = 'preset-chip';
+        chip.dataset.fill = u.upi_id;
+        chip.textContent = u.upi_id;
+        chip.addEventListener('click', ()=>{ sendRecipientInput.value = u.upi_id; refreshRecipientUI(); sendRecipientInput.focus(); });
+        row.appendChild(chip);
+      });
+  }catch(e){ /* demo picker just stays empty if the backend is unreachable — manual entry still works */ }
+}
 
 const SEND_STEPS = ['recipient','amount','summary','auth','processing','success'];
 function showSendStep(step){
@@ -3413,12 +3452,35 @@ function resetSendFlow(){
   document.getElementById('send-amount-input').value = '';
   document.getElementById('send-note-input').value = '';
   document.getElementById('send-amount-error').textContent = '';
-  state.send = { recipient:'', isUpi:false, isMobile:false, amount:0, note:'' };
+  state.send = { recipient:'', recipientName:'', recipientBank:'', amount:0, note:'' };
+  currentSendIdempotencyKey = null;
   showSendStep('recipient');
+  populateSendDemoRecipients();
 }
-document.getElementById('send-continue-recipient').addEventListener('click', ()=>{
-  document.getElementById('send-balance-display').textContent = '₹'+state.balance.toLocaleString('en-IN');
-  showSendStep('amount');
+document.getElementById('send-continue-recipient').addEventListener('click', async ()=>{
+  const btn = document.getElementById('send-continue-recipient');
+  const v = sendRecipientInput.value.trim().toLowerCase();
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try{
+    const result = await api.lookupUser(v);
+    state.send.recipient = result.user.upi_id;
+    state.send.recipientName = result.user.name;
+    state.send.recipientBank = result.bank.name;
+    document.getElementById('rp-name').textContent = result.user.name;
+    document.getElementById('rp-upi').textContent = result.user.upi_id;
+    document.getElementById('rp-bank').textContent = result.bank.name;
+    document.getElementById('send-recipient-card').hidden = false;
+    sendRecipientErr.textContent = '';
+    document.getElementById('send-balance-display').textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
+    showSendStep('amount');
+  }catch(e){
+    sendRecipientErr.textContent = e.detail || 'Recipient not found.';
+    announce(sendRecipientErr.textContent, true);
+    document.getElementById('send-recipient-card').hidden = true;
+  }finally{
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
 });
 document.getElementById('send-amount-input').addEventListener('input', ()=>{ document.getElementById('send-amount-error').textContent=''; });
 document.getElementById('send-continue-amount').addEventListener('click', ()=>{
@@ -3426,7 +3488,7 @@ document.getElementById('send-continue-amount').addEventListener('click', ()=>{
   const amt = parseFloat(raw);
   const errEl = document.getElementById('send-amount-error');
   if(!raw || isNaN(amt) || amt <= 0){ errEl.textContent = 'Enter an amount greater than ₹0.'; announce(errEl.textContent, true); return; }
-  if(amt > state.balance){ errEl.textContent = 'That\'s more than your demo balance of ₹'+state.balance.toLocaleString('en-IN')+'.'; announce(errEl.textContent, true); return; }
+  if(amt > Number(state.balance)){ errEl.textContent = 'That\'s more than your balance of ₹'+Number(state.balance).toLocaleString('en-IN')+'.'; announce(errEl.textContent, true); return; }
   state.send.amount = amt;
   state.send.note = document.getElementById('send-note-input').value.trim();
   document.getElementById('sm-name').textContent = document.getElementById('rp-name').textContent;
@@ -3498,27 +3560,36 @@ document.getElementById('send-auth-biometric').addEventListener('click', async (
 });
 function generateTxId(){ return 'BP' + Date.now().toString(36).toUpperCase() + Math.floor(Math.random()*900+100); }
 function generateUTR(){ let n=''; for(let i=0;i<12;i++) n += Math.floor(Math.random()*10); return n; }
+let currentSendIdempotencyKey = null;
 async function completePayment(method){
   showSendStep('processing');
-  await new Promise(r=>setTimeout(r, 1100));
-  state.balance -= state.send.amount;
-  const txn = {
-    id: generateTxId(), utr: generateUTR(), amount: state.send.amount,
-    recipient: document.getElementById('rp-upi').textContent, name: document.getElementById('rp-name').textContent,
-    note: state.send.note, time: new Date().toISOString(), method
-  };
-  state.transactions.unshift(txn);
-  scheduleSave();
-  document.getElementById('rc-txid').textContent = txn.id;
-  document.getElementById('rc-utr').textContent = txn.utr;
-  document.getElementById('rc-time').textContent = new Date(txn.time).toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
-  document.getElementById('rc-balance').textContent = '₹'+state.balance.toLocaleString('en-IN');
-  const caption = 'Sent ₹'+txn.amount.toLocaleString('en-IN')+' to '+txn.name+'. This is a simulated demo transaction — no real money moved.';
-  document.getElementById('send-success-caption').textContent = caption;
-  showSendStep('success');
-  vibratePattern([100,60,100,60,220]);
-  announce(t('payment_success')+caption, true);
-  renderBalanceScreen();
+  if(!currentSendIdempotencyKey) currentSendIdempotencyKey = genIdempotencyKey();
+  try{
+    const receipt = await api.sendPayment(state.send.recipient, state.send.amount, state.send.note, currentSendIdempotencyKey);
+    const tx = receipt.transaction;
+    state.balance = receipt.sender_balance_after;
+    state.transactions.unshift(mapBackendTx(tx));
+    scheduleSave();
+    document.getElementById('rc-txid').textContent = tx.transaction_id;
+    document.getElementById('rc-utr').textContent = tx.reference_id;
+    document.getElementById('rc-time').textContent = new Date(tx.created_at).toLocaleString([], {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('rc-balance').textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
+    const recipientLabel = state.send.recipientName || tx.receiver_upi;
+    const caption = 'Sent ₹'+Number(tx.amount).toLocaleString('en-IN')+' to '+recipientLabel+'. This is a simulated demo transaction — no real money moved, no bank or UPI network was contacted.';
+    document.getElementById('send-success-caption').textContent = caption;
+    currentSendIdempotencyKey = null;
+    showSendStep('success');
+    vibratePattern([100,60,100,60,220]);
+    announce(t('payment_success')+caption, true);
+    renderBalanceScreen();
+    renderHomeGreeting();
+  }catch(e){
+    showSendStep('summary');
+    const msg = e.detail || 'BraillePay server is unavailable. No payment was made.';
+    document.getElementById('send-auth-status') && (document.getElementById('send-auth-status').textContent = 'Payment failed');
+    announce('Payment failed. '+msg, true);
+    showToast(msg, true);
+  }
 }
 document.getElementById('send-repeat-receipt').addEventListener('click', ()=>{
   speak(document.getElementById('send-success-caption').textContent, {interrupt:true});
@@ -3549,7 +3620,7 @@ document.getElementById('send-download-receipt').addEventListener('click', ()=>{
    BALANCE & TRANSACTIONS
    ============================================================ */
 function renderBalanceScreen(){
-  document.getElementById('balance-main-display').textContent = '₹'+state.balance.toLocaleString('en-IN');
+  document.getElementById('balance-main-display').textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
   const list = document.getElementById('balance-tx-list');
   list.innerHTML = '';
   if(!state.transactions.length){
@@ -3563,16 +3634,20 @@ function renderBalanceScreen(){
     const row = document.createElement('div');
     row.className = 'summary-card';
     row.style.marginBottom = '10px';
+    const received = txn.direction === 'RECEIVED';
+    const sign = received ? '+' : '-';
+    const color = received ? 'var(--accent-2)' : 'var(--text)';
     row.innerHTML =
-      '<div class="summary-row"><span>'+txn.name+'</span><b>-₹'+txn.amount.toLocaleString('en-IN')+'</b></div>'+
+      '<div class="summary-row"><span>'+(txn.name||txn.recipient)+'</span><b style="color:'+color+';">'+sign+'₹'+Number(txn.amount).toLocaleString('en-IN')+'</b></div>'+
       '<div class="summary-row"><span>'+txn.recipient+'</span><span>'+new Date(txn.time).toLocaleDateString([], {month:'short', day:'numeric'})+'</span></div>'+
-      (txn.note ? ('<div class="summary-row"><span>'+t('send_note')+'</span><span>'+txn.note+'</span></div>') : '');
+      (txn.note ? ('<div class="summary-row"><span>'+t('send_note')+'</span><span>'+txn.note+'</span></div>') : '')+
+      (txn.status && txn.status !== 'SUCCESS' ? ('<div class="summary-row"><span>Status</span><span>'+txn.status+'</span></div>') : '');
     list.appendChild(row);
   });
 }
 document.getElementById('btn-speak-balance').addEventListener('click', ()=>{
-  speak(t('balance_speak')+state.balance.toLocaleString('en-IN'), {interrupt:true});
-  announce('Balance ₹'+state.balance.toLocaleString('en-IN'));
+  speak(t('balance_speak')+Number(state.balance).toLocaleString('en-IN'), {interrupt:true});
+  announce('Balance ₹'+Number(state.balance).toLocaleString('en-IN'));
 });
 let suppressNextLearningAutoStart = false;
 const originalShowScreen = showScreen;
@@ -3597,6 +3672,229 @@ showScreen = function(name, opts){
 };
 
 /* ============================================================
+   BACKEND API CLIENT
+   BraillePay's backend is a simulated payments API: no real
+   money, no real bank/UPI network is ever contacted. Point
+   API_BASE_URL at wherever you deployed backend/ (see the
+   project README) — for local development the default below
+   matches `uvicorn app.main:app --port 8000`.
+   ============================================================ */
+const API_BASE_URL = window.BRAILLEPAY_API_BASE_URL || 'http://localhost:8000';
+const TOKEN_KEY = 'braillepay_session_token';
+
+function getToken(){ try{ return sessionStorage.getItem(TOKEN_KEY); }catch(e){ return null; } }
+function setToken(tok){
+  try{
+    if(tok) sessionStorage.setItem(TOKEN_KEY, tok);
+    else sessionStorage.removeItem(TOKEN_KEY);
+  }catch(e){ /* sessionStorage unavailable (private browsing) — session just won't survive reload */ }
+}
+
+class ApiError extends Error {
+  constructor(status, detail){ super(detail || ('Request failed ('+status+')')); this.status = status; this.detail = detail; }
+}
+
+async function apiRequest(path, opts){
+  opts = opts || {};
+  const method = opts.method || 'GET';
+  const useAuth = opts.auth !== false;
+  const finalHeaders = Object.assign({}, opts.headers || {});
+  if(opts.body !== undefined) finalHeaders['Content-Type'] = 'application/json';
+  if(useAuth){
+    const tok = getToken();
+    if(tok) finalHeaders['Authorization'] = 'Bearer '+tok;
+  }
+  let resp;
+  try{
+    resp = await fetch(API_BASE_URL + path, {
+      method: method,
+      headers: finalHeaders,
+      body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined
+    });
+  }catch(networkErr){
+    // Part 42: never fake a successful transaction if the backend is unreachable.
+    throw new ApiError(0, 'BraillePay server is unavailable. No payment was made.');
+  }
+  if(resp.status === 204) return null;
+  let data = null;
+  try{ data = await resp.json(); }catch(e){ /* empty/non-JSON body */ }
+  if(!resp.ok){
+    if(resp.status === 401 && useAuth) handleSessionExpired();
+    const detail = (data && data.detail) ? data.detail : ('Request failed ('+resp.status+')');
+    throw new ApiError(resp.status, detail);
+  }
+  return data;
+}
+
+function genIdempotencyKey(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'idem-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+}
+
+const api = {
+  login: (username, pin) => apiRequest('/api/auth/login', { method:'POST', auth:false, body:{ username, pin } }),
+  logout: () => apiRequest('/api/auth/logout', { method:'POST' }).catch(()=>{}),
+  getMe: () => apiRequest('/api/auth/me'),
+  getDemoUsers: () => apiRequest('/api/auth/demo-users', { auth:false }),
+  getBalance: () => apiRequest('/api/accounts/balance'),
+  lookupUser: (upiId) => apiRequest('/api/users/lookup?upi_id='+encodeURIComponent(upiId)),
+  sendPayment: (receiverUpi, amount, note, idempotencyKey) => apiRequest('/api/payments/send', {
+    method:'POST',
+    body:{ receiver_upi: receiverUpi, amount: amount, note: note || undefined },
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}
+  }),
+  refundPayment: (transactionId) => apiRequest('/api/payments/'+encodeURIComponent(transactionId)+'/refund', { method:'POST' }),
+  getTransactions: (params) => {
+    const qs = params ? ('?'+new URLSearchParams(params).toString()) : '';
+    return apiRequest('/api/transactions'+qs);
+  },
+  getTransaction: (id) => apiRequest('/api/transactions/'+encodeURIComponent(id)),
+  getMyQR: () => apiRequest('/api/qr/my'),
+  getDemoQRList: () => apiRequest('/api/qr/demo-list', { auth:false }),
+  createPaymentRequest: (payerUpi, amount, note) => apiRequest('/api/payment-requests', { method:'POST', body:{ payer_upi: payerUpi, amount: amount, note: note || undefined } }),
+  getPaymentRequests: (direction) => apiRequest('/api/payment-requests'+(direction?('?direction='+direction):'')),
+  payPaymentRequest: (id) => apiRequest('/api/payment-requests/'+encodeURIComponent(id)+'/pay', { method:'POST' }),
+  declinePaymentRequest: (id) => apiRequest('/api/payment-requests/'+encodeURIComponent(id)+'/decline', { method:'POST' }),
+  getNotifications: () => apiRequest('/api/notifications'),
+  markNotificationRead: (id) => apiRequest('/api/notifications/'+encodeURIComponent(id)+'/read', { method:'POST' }),
+  resetDemo: () => apiRequest('/api/demo/reset', { method:'POST', auth:false })
+};
+
+function handleSessionExpired(){
+  setToken(null);
+  state.auth.user = null;
+  try{ showToast('Session expired — please sign in again.'); }catch(e){}
+  try{ showScreen('login'); }catch(e){}
+}
+
+/* ============================================================
+   SESSION / LOGIN
+   Real backend authentication, layered on top of (and separate
+   from) the existing local app-lock (device PIN/biometric) above
+   — that lock is a per-device convenience; this is who you are.
+   ============================================================ */
+function updateAccountSettingsLine(){
+  const el = document.getElementById('settings-account-line');
+  if(!el) return;
+  el.textContent = state.auth.user
+    ? ('Signed in as '+state.auth.user.name+' ('+state.auth.user.upi_id+')')
+    : 'Not signed in';
+}
+
+function renderHomeGreeting(){
+  const heading = document.getElementById('main-heading');
+  if(heading && state.auth.user) heading.textContent = 'Hello '+state.auth.user.name.split(' ')[0]+' 👋';
+  const balLine = document.getElementById('home-balance-line');
+  if(balLine) balLine.textContent = '₹'+Number(state.balance).toLocaleString('en-IN');
+  updateAccountSettingsLine();
+}
+
+function mapBackendTx(tx){
+  const isSent = tx.direction === 'SENT';
+  let counterpart = isSent ? tx.receiver_upi : tx.sender_upi;
+  if(tx.description && tx.description.includes(' paid ')){
+    const parts = tx.description.split(' paid ');
+    counterpart = isSent ? parts[1] : parts[0];
+  }
+  return {
+    id: tx.transaction_id, utr: tx.reference_id, amount: tx.amount,
+    recipient: isSent ? tx.receiver_upi : tx.sender_upi,
+    name: counterpart, note: tx.note, time: tx.created_at,
+    direction: tx.direction, status: tx.status, type: tx.type
+  };
+}
+
+async function refreshAccountData(){
+  try{
+    const bal = await api.getBalance();
+    state.balance = bal.balance;
+  }catch(e){ /* keep last known balance rather than crashing the UI */ }
+  try{
+    const txResp = await api.getTransactions({ limit: '50' });
+    state.transactions = txResp.items.map(mapBackendTx);
+  }catch(e){ /* history just stays as last known */ }
+  renderHomeGreeting();
+  const balScreen = document.getElementById('screen-balance');
+  if(balScreen && balScreen.classList.contains('active')) renderBalanceScreen();
+}
+
+async function populateDemoUserPicker(){
+  const row = document.getElementById('login-demo-users');
+  if(!row) return;
+  row.innerHTML = '';
+  try{
+    const users = await api.getDemoUsers();
+    users.forEach(u=>{
+      const btn = document.createElement('button');
+      btn.className = 'preset-chip';
+      btn.type = 'button';
+      btn.textContent = u.name.split(' ')[0];
+      btn.setAttribute('aria-label', 'Fill demo login for '+u.name);
+      btn.addEventListener('click', ()=>{
+        document.getElementById('login-username-input').value = u.username;
+        document.getElementById('login-pin-input').value = '1234';
+        document.getElementById('login-submit-btn').focus();
+      });
+      row.appendChild(btn);
+    });
+  }catch(e){ /* backend unreachable — quick-login list stays empty, manual entry still works */ }
+}
+
+async function doLogin(username, pin){
+  const errEl = document.getElementById('login-error');
+  const btn = document.getElementById('login-submit-btn');
+  errEl.textContent = '';
+  if(!username || !pin){ errEl.textContent = 'Enter a username and PIN.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try{
+    const resp = await api.login(username, pin);
+    setToken(resp.access_token);
+    state.auth.user = resp.user;
+    await refreshAccountData();
+    await populateSendDemoRecipients();
+    announce('Signed in as '+resp.user.name, true);
+    showScreen('home');
+  }catch(e){
+    errEl.textContent = e.detail || 'Sign in failed.';
+    announce(errEl.textContent, true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+}
+document.getElementById('login-submit-btn').addEventListener('click', ()=>{
+  doLogin(document.getElementById('login-username-input').value.trim(), document.getElementById('login-pin-input').value.trim());
+});
+document.getElementById('login-pin-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('login-submit-btn').click(); });
+document.getElementById('login-username-input').addEventListener('keydown', (e)=>{ if(e.key==='Enter') document.getElementById('login-pin-input').focus(); });
+
+document.getElementById('settings-signout-btn').addEventListener('click', async ()=>{
+  await api.logout();
+  setToken(null);
+  state.auth.user = null;
+  state.balance = 0;
+  state.transactions = [];
+  updateAccountSettingsLine();
+  showToast('Signed out.');
+  showScreen('login');
+  document.getElementById('login-username-input').value = '';
+  document.getElementById('login-pin-input').value = '';
+});
+
+async function tryRestoreSession(){
+  const tok = getToken();
+  if(!tok) return false;
+  try{
+    const me = await api.getMe();
+    state.auth.user = me;
+    await refreshAccountData();
+    return true;
+  }catch(e){
+    setToken(null);
+    return false;
+  }
+}
+
+/* ============================================================
    INIT — every step runs in isolation. A failure in any one
    subsystem (storage, speech, WebAuthn, voice assistant, etc.)
    is caught, logged, and skipped rather than being allowed to
@@ -3619,8 +3917,25 @@ safeInit('Build learning grid', buildCharGrid);
 safeInit('Update mastery display', updateMastery);
 safeInit('Render scan history', renderHistory);
 safeInit('Render balance', renderBalanceScreen);
-safeInit('Show splash screen', ()=>showScreen('splash', {silent:true}));
-safeInit('Authentication / lock screen', initAuth);
+safeInit('Populate demo login picker', populateDemoUserPicker);
+
+(async function bootSession(){
+  try{
+    const restored = await tryRestoreSession();
+    if(restored){
+      await populateSendDemoRecipients();
+      safeInit('Show splash screen', ()=>showScreen('splash', {silent:true}));
+      safeInit('Authentication / lock screen', initAuth);
+    }else{
+      showScreen('login', {silent:true});
+      const first = document.getElementById('login-username-input');
+      if(first) first.focus({preventScroll:true});
+    }
+  }catch(e){
+    console.error('[BraillePay startup] Session restore failed — showing login:', e);
+    try{ showScreen('login', {silent:true}); }catch(e2){}
+  }
+})();
 
 // Voice synthesis (Hindi/Marathi/English voice selection) is optional — if the Web Speech
 // API is missing or throws, the rest of the app (haptics, visuals, everything else) must
