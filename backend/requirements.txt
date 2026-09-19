@@ -10,3 +10,5 @@ python-dotenv==1.0.1
 python-multipart==0.0.9
 qrcode[pil]==7.4.2
 webauthn==2.2.0
+dnspython
+certifi
