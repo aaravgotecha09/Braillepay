@@ -89,10 +89,11 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
         account_number = f"{bank_code[bank_id]}{str(bank_seq[bank_id]).zfill(9)}"
         acct_id = account_id_for(username)
 
-        existing = await db.accounts.find_one({"account_id": acct_id})
-        if not existing:
-            await db.accounts.insert_one(
-                {
+        # Use update_one with upsert=True to prevent duplicate key errors on restart
+        await db.accounts.update_one(
+            {"account_id": acct_id},
+            {
+                "$set": {
                     "account_id": acct_id,
                     "user_id": uid,
                     "bank_id": bank_id,
@@ -103,8 +104,10 @@ async def seed_users_accounts_qr(db: AsyncIOMotorDatabase, *, reset_balances: bo
                     "status": "ACTIVE",
                     "created_at": now,
                 }
-            )
-        elif reset_balances:
+            },
+            upsert=True,
+        )
+        if reset_balances:
             await db.accounts.update_one(
                 {"account_id": acct_id}, {"$set": {"balance": d128(balance)}}
             )
