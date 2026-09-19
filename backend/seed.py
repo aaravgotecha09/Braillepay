@@ -16,6 +16,7 @@ in app/services/seed_service.py so the CLI script and the
 POST /api/demo/reset endpoint can never drift apart.
 """
 import asyncio
+import certifi
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
@@ -27,26 +28,15 @@ settings = get_settings()
 
 
 async def seed():
-    client = AsyncIOMotorClient(settings.mongo_url)
+    # Pass certifi.where() to allow secure SSL connections to MongoDB Atlas
+    client = AsyncIOMotorClient(settings.mongo_url, tlsCAFile=certifi.where())
     db = client[settings.db_name]
 
     print(f"Connecting to {settings.mongo_url} / db '{settings.db_name}' ...")
 
-    result = await seed_service.seed_all(db)
-    print(f"Seeded {result['banks']} banks.")
-    print(f"Seeded {result['users']} demo users, accounts and QR identities.")
-    print(f"Seeded {result['sample_transactions_created']} new sample transactions "
-          f"(already-present ones were left untouched).")
-
     await ensure_indexes()
-    print("Indexes ensured.")
-
-    print("\n=== Demo login credentials (PIN is the same for all: 1234) ===")
-    for username, name, upi_id, balance, bank_id in seed_service.USERS:
-        print(f"  {username:10s}  PIN: {seed_service.DEMO_PIN}   ({name}, {upi_id})")
-    print("\nDone.")
-
-    client.close()
+    result = await seed_service.seed_all(db)
+    print(f"Seeded successfully: {result}")
 
 
 if __name__ == "__main__":
