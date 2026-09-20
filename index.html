@@ -3955,7 +3955,7 @@ document.getElementById('btn-speak-balance').addEventListener('click', ()=>{
 let suppressNextLearningAutoStart = false;
 const originalShowScreen = showScreen;
 showScreen = function(name, opts){
-  if(name === 'send' && !state.auth.unlocked){ showToast(t('unlock_first')); return; }
+
   if(name === 'send') resetSendFlow();
   if(name === 'balance') renderBalanceScreen();
   if(name === 'receive') loadReceiveScreen();
