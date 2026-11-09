@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>BraillePay — Accessible QR Verification</title>
+<meta name="description" content="BraillePay: a blind-friendly QR verifier that lets you confirm a code's contents through sound and touch, without ever giving away the answer." />
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0f14">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================= TOKENS ============================= */
+:root{
+  --bg:#121218;
+  --bg-elevated:#1B1C24;
+  --surface:#20212C;
+  --surface-hover:#2A2C39;
+  --accent:#F2B705;
+  --accent-ink:#332600;
+  --accent-2:#4FD1C5;
+  --danger:#FF6B6B;
+  --text:#F5F3EE;
+  --text-muted:#A6A4B3;
+  --border:#34333F;
+  --radius-lg:28px;
+  --radius-md:18px;
+  --radius-sm:10px;
+  --font-display:'Space Grotesk', system-ui, sans-serif;
+  --font-body:'Inter', system-ui, sans-serif;
+  --focus:#FFD65C;
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-smooth: cubic-bezier(.22,1,.36,1);
+  --motion-fast:.18s;
+  --motion-med:.4s;
+  --vibe:1;
+}
+[data-contrast="high"]{
+  --bg:#000000; --bg-elevated:#000000; --surface:#0A0A0A; --surface-hover:#161616;
+  --accent:#FFDD00; --accent-ink:#000000; --accent-2:#5CFFEA; --danger:#FF8A8A;
+  --text:#FFFFFF; --text-muted:#E8E8E8; --border:#FFFFFF; --focus:#FFDD00;
+}
+[data-motion="reduced"] *{ animation-duration:.001ms !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+
+*{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0; min-height:100vh;
+  background:
+    radial-gradient(1200px 800px at 20% -10%, #1c1e2a 0%, transparent 60%),
+    radial-gradient(1000px 700px at 100% 0%, #191a24 0%, transparent 55%),
+    var(--bg);
+  color:var(--text); font-family:var(--font-body);
+  display:flex; align-items:center; justify-content:center; padding:28px 14px;
+}
+h1,h2,h3{ font-family:var(--font-display); margin:0; letter-spacing:-0.01em; }
+p{ margin:0; }
+button{ font-family:inherit; }
+a{ color:inherit; }
+
+.sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.skip-link{ position:absolute; left:8px; top:-60px; background:var(--accent); color:var(--accent-ink); padding:10px 16px; border-radius:var(--radius-sm); font-weight:700; z-index:999; transition:top var(--motion-fast); }
+.skip-link:focus{ top:8px; }
+:focus-visible{ outline:3px solid var(--focus); outline-offset:3px; border-radius:6px; }
+
+/* ============================= MICRO-INTERACTIONS ============================= */
+button{ position:relative; overflow:hidden; -webkit-tap-highlight-color:transparent; transition:transform .12s var(--ease-spring), background var(--motion-fast), box-shadow var(--motion-fast), border-color var(--motion-fast); }
+button:active{ transform:scale(.94); }
+.ripple-ink{
+  position:absolute; border-radius:50%; background:rgba(255,255,255,.35); pointer-events:none;
+  transform:scale(0); animation:rippleAnim .6s var(--ease-smooth) forwards; mix-blend-mode:overlay;
+}
+[data-contrast="high"] .ripple-ink{ background:rgba(0,0,0,.35); }
+@keyframes rippleAnim{ to{ transform:scale(2.6); opacity:0; } }
+
+@keyframes screenShake{ 0%,100%{ transform:translate(0,0); } 20%{ transform:translate(-2px,1px); } 40%{ transform:translate(2px,-1px); } 60%{ transform:translate(-1px,1px); } 80%{ transform:translate(1px,-1px); } }
+@keyframes screenCompress{ 0%{ transform:scaleY(1); } 35%{ transform:scaleY(.985); } 100%{ transform:scaleY(1); } }
+.shake-active{ animation:screenShake .3s var(--ease-smooth); }
+.compress-active{ animation:screenCompress .32s var(--ease-smooth); }
+
+/* ============================= DEVICE FRAME ============================= */
+.device-frame{ width:100%; max-width:428px; height:min(896px, calc(100vh - 40px)); background:linear-gradient(180deg,#08080b,#000); border-radius:46px; padding:14px; box-shadow:0 40px 90px -20px rgba(0,0,0,.7), 0 0 0 1px #000; position:relative; }
+.device-notch{ position:absolute; top:14px; left:50%; transform:translateX(-50%); width:120px; height:22px; background:#000; border-radius:0 0 16px 16px; z-index:50; }
+.device-screen{ position:relative; width:100%; height:100%; background:var(--bg); border-radius:32px; overflow:hidden; display:flex; flex-direction:column; box-shadow: inset 0 0 0 1px #000; transform-origin:center; }
+@media (max-width:480px){ body{ padding:0; } .device-frame{ max-width:100%; height:100vh; border-radius:0; padding:0; box-shadow:none; } .device-notch{ display:none; } .device-screen{ border-radius:0; } }
+
+.status-bar{ display:flex; align-items:center; justify-content:space-between; padding:14px 20px 4px; font-size:12px; color:var(--text-muted); font-weight:600; flex-shrink:0; }
+
+/* ============================= SCREENS ============================= */
+.screens{ position:relative; flex:1; overflow:hidden; }
+.screen{ position:absolute; inset:0; display:none; flex-direction:column; overflow-y:auto; padding:14px 20px 28px; }
+.screen.active{ display:flex; animation:screenIn var(--motion-med) var(--ease-smooth); }
+@keyframes screenIn{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
+[data-hand="left"] .screen{ direction:rtl; }
+[data-hand="left"] .screen > *{ direction:ltr; }
+
+.screen-header{ display:flex; align-items:center; gap:10px; margin-bottom:18px; }
+.back-btn{ width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; font-size:18px; }
+.back-btn:hover{ background:var(--surface-hover); }
+.screen-title{ font-size:20px; font-weight:700; }
+.screen-sub{ color:var(--text-muted); font-size:13px; margin-top:2px; }
+
+/* ============================= SPLASH ============================= */
+#screen-splash{ align-items:center; justify-content:center; text-align:center; gap:20px; }
+.splash-logo{ display:flex; gap:14px; }
+.brand-title{ font-size:30px; font-weight:700; }
+.brand-tag{ color:var(--text-muted); font-size:14px; max-width:260px; }
+.splash-hint{ color:var(--text-muted); font-size:12px; margin-top:30px; }
+.splash-ring{ width:64px; height:64px; border-radius:50%; border:3px solid var(--border); border-top-color:var(--accent); animation:spin 1s linear infinite; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ============================= HOME ============================= */
+.home-hero{ background:linear-gradient(135deg, var(--surface), var(--bg-elevated)); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px; margin-bottom:20px; position:relative; overflow:hidden; }
+.home-hero h1{ font-size:22px; margin-bottom:6px; }
+.home-hero p{ color:var(--text-muted); font-size:13.5px; line-height:1.5; }
+.hero-cells{ display:flex; gap:8px; margin-top:16px; }
+
+.nav-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.nav-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:16px 14px; text-align:left; cursor:pointer; color:var(--text); display:flex; flex-direction:column; gap:10px; min-height:118px; transition:background var(--motion-fast), transform .18s var(--ease-spring), box-shadow var(--motion-fast); }
+.nav-card:hover{ background:var(--surface-hover); transform:translateY(-3px); box-shadow:0 14px 30px -12px rgba(0,0,0,.5); }
+.nav-card:active{ transform:translateY(-1px) scale(.97); }
+.nav-card .icon{ width:38px; height:38px; border-radius:11px; background:var(--accent); color:var(--accent-ink); display:flex; align-items:center; justify-content:center; font-size:19px; transition:transform .3s var(--ease-spring); }
+.nav-card:hover .icon{ transform:rotate(-6deg) scale(1.08); }
+.nav-card .icon.alt{ background:var(--accent-2); }
+.nav-card b{ font-size:14.5px; }
+.nav-card span{ font-size:11.5px; color:var(--text-muted); line-height:1.35; }
+.nav-card.wide{ grid-column:1 / -1; flex-direction:row; align-items:center; min-height:auto; padding:16px; }
+
+/* ============================= LOCK OVERLAY ============================= */
+#app-lock{ position:absolute; inset:0; z-index:500; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:24px; }
+#app-lock[hidden]{ display:none; }
+.lock-inner{ text-align:center; display:flex; flex-direction:column; align-items:center; gap:10px; max-width:320px; width:100%; }
+.lock-inner .btn-row{ width:100%; }
+.lock-shake{ animation:screenShake .3s var(--ease-smooth); }
+.lock-status{ min-height:16px; font-size:12.5px; color:var(--accent-2); }
+.lock-status.err{ color:var(--danger); }
+
+/* ============================= PIN PAD ============================= */
+.pinpad-dots{ display:flex; gap:10px; justify-content:center; margin:6px 0 14px; }
+.pinpad-dots span{ width:14px; height:14px; border-radius:50%; box-shadow:inset 0 0 0 2px var(--border); background:transparent; transition:background .15s var(--ease-spring); }
+.pinpad-dots span.filled{ background:var(--accent); }
+.pinpad-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; width:100%; }
+.pinpad-key{ background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:14px; padding:14px 0; font-size:18px; font-weight:700; cursor:pointer; }
+.pinpad-key:hover{ background:var(--surface-hover); }
+.pinpad-key.wide{ grid-column:span 1; font-size:13px; }
+
+.voice-status-line{ display:flex; align-items:flex-start; gap:8px; margin:-6px 0 16px; padding:9px 12px; border-radius:10px; background:var(--bg-elevated); border:1px solid var(--border); font-size:12.5px; color:var(--text-muted); }
+.voice-status-line #voice-status-icon{ flex-shrink:0; font-weight:700; color:var(--accent-2); }
+.voice-status-line.warn{ border-color:color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.voice-status-line.warn #voice-status-icon{ color:var(--danger); }
+.voice-status-line.warn #voice-status-detail{ color:var(--danger); }
+
+.auto-lesson-panel{ background:var(--bg-elevated); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:14px; }
+.auto-lesson-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.auto-lesson-row #auto-lesson-progress{ font-size:12.5px; font-weight:700; color:var(--text-muted); }
+.hey-braille-hint{ font-size:12px; color:var(--text-muted); margin-top:10px; text-align:center; font-style:italic; }
+
+/* ============================= VOICE ASSISTANT ============================= */
+.voice-indicator{ position:absolute; top:10px; left:50%; transform:translateX(-50%); z-index:400; display:flex; align-items:center; gap:8px; background:rgba(0,0,0,.72); backdrop-filter:blur(6px); color:#fff; padding:8px 14px; border-radius:100px; font-size:12px; font-weight:600; box-shadow:0 8px 20px -8px rgba(0,0,0,.6); }
+.voice-indicator[hidden]{ display:none; }
+.voice-indicator .voice-dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); animation:pulseSoft 1s infinite; }
+.voice-fab{ position:absolute; right:16px; bottom:86px; z-index:300; width:52px; height:52px; border-radius:50%; border:none; background:var(--accent); color:var(--accent-ink); font-size:20px; box-shadow:0 10px 24px -8px rgba(0,0,0,.6); cursor:pointer; }
+.voice-fab[hidden]{ display:none; }
+.voice-fab.on{ box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 30%, transparent); }
+.retry-btn{ margin-top:10px; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:12px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer; }
+.retry-btn:hover{ background:var(--surface-hover); }
+
+/* ============================= TOAST ============================= */
+.app-toast{ position:absolute; left:50%; bottom:96px; transform:translateX(-50%) translateY(12px); z-index:600; background:var(--surface); border:1px solid var(--border); color:var(--text); padding:11px 18px; border-radius:100px; font-size:13px; font-weight:600; box-shadow:0 14px 30px -12px rgba(0,0,0,.6); opacity:0; pointer-events:none; transition:opacity .25s var(--ease-smooth), transform .25s var(--ease-smooth); max-width:88%; text-align:center; }
+.app-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+.app-toast.err{ border-color:color-mix(in srgb, var(--danger) 50%, var(--border)); color:var(--danger); }
+
+/* Web pages cannot detect or block real screenshots/screen-recording — there is no browser API
+   for that. This is the closest practical safeguard: blur balance/PIN content the instant the
+   tab/window loses focus or is backgrounded, so a shoulder-surfer glancing at a minimized app
+   or a screen-recording of the whole desktop doesn't catch the numbers. */
+.privacy-blur #screen-balance .cell-caption,
+.privacy-blur #screen-balance #balance-main-display,
+.privacy-blur #screen-balance #balance-tx-list,
+.privacy-blur .pinpad-dots span.filled{ filter: blur(10px); transition:filter .15s; }
+
+/* ============================= BUTTONS ============================= */
+.btn{ border:none; border-radius:16px; padding:15px 20px; font-weight:700; font-size:15px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; width:100%; }
+.btn-primary{ background:var(--accent); color:var(--accent-ink); box-shadow:0 8px 20px -8px color-mix(in srgb, var(--accent) 60%, transparent); }
+.btn-primary:hover{ filter:brightness(1.08); }
+.btn-secondary{ background:var(--surface); color:var(--text); border:1px solid var(--border); }
+.btn-secondary:hover{ background:var(--surface-hover); }
+.btn-ghost{ background:transparent; color:var(--accent); border:1px solid var(--border); }
+.btn-danger{ background:transparent; color:var(--danger); border:1px solid var(--danger); }
+.btn-row{ display:flex; gap:10px; margin-top:14px; }
+.btn-sm{ padding:10px 14px; font-size:13px; width:auto; border-radius:12px; }
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* ============================= BRAILLE CELL ============================= */
+.cell-wrap{ position:relative; display:inline-block; }
+.braille-cell{ position:relative; z-index:2; display:inline-grid; grid-template-columns:repeat(2, 1fr); grid-template-rows:repeat(3, 1fr); gap:9px; padding:14px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:16px; width:fit-content; }
+.braille-cell .dot{ width:22px; height:22px; border-radius:50%; background:#000; box-shadow: inset 0 0 0 2px var(--border); transition:background .22s var(--ease-spring), box-shadow .22s var(--ease-spring), transform .22s var(--ease-spring); cursor:pointer; border:none; padding:0; }
+.braille-cell .dot.raised{ background:var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent), 0 2px 8px rgba(0,0,0,.4); transform:scale(1.08); }
+.braille-cell .dot.pulse{ animation:dotPulse .5s var(--ease-spring); }
+@keyframes dotPulse{ 0%{ transform:scale(.7); } 55%{ transform:scale(1.32); box-shadow:0 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent); } 100%{ transform:scale(1.08); } }
+.braille-cell.lg .dot{ width:30px; height:30px; }
+.braille-cell.sm{ padding:9px; gap:6px; }
+.braille-cell.sm .dot{ width:13px; height:13px; cursor:default; }
+
+.ripple-ring{ position:absolute; inset:-4px; border-radius:22px; border:2px solid var(--accent); opacity:0; pointer-events:none; z-index:1; }
+.ripple-ring.go{ animation:ringExpand var(--ring-dur, .7s) var(--ease-smooth); }
+.dot.dot-active{ background:var(--accent); box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 35%, transparent), 0 2px 10px rgba(0,0,0,.5); transform:scale(1.14); }
+.dot.dot-skip{ box-shadow: inset 0 0 0 2px var(--text-muted); }
+@keyframes ringExpand{ 0%{ opacity:.8; transform:scale(.9); } 100%{ opacity:0; transform:scale(1.5); } }
+
+.cell-stage{ display:flex; flex-direction:column; align-items:center; gap:16px; padding:22px 0; }
+.cell-caption{ font-size:13px; color:var(--text-muted); text-align:center; min-height:18px; }
+.category-chip{ display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:100px; background:var(--surface); border:1px solid var(--border); font-weight:700; font-size:13px; letter-spacing:.02em; transition:all .25s var(--ease-spring); }
+.category-chip.pop{ animation:chipPop .4s var(--ease-spring); }
+@keyframes chipPop{ 0%{ transform:scale(.8); } 60%{ transform:scale(1.08); } 100%{ transform:scale(1); } }
+.category-chip.letter{ color:var(--accent); border-color:color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.category-chip.digit{ color:var(--accent-2); border-color:color-mix(in srgb, var(--accent-2) 45%, var(--border)); }
+.category-chip.space{ color:var(--text-muted); }
+.category-chip.symbol{ color:var(--danger); border-color:color-mix(in srgb, var(--danger) 45%, var(--border)); }
+
+/* waveform */
+.waveform{ display:flex; align-items:flex-end; gap:3px; height:28px; }
+.waveform .bar{ width:4px; border-radius:3px; background:var(--accent); height:4px; transition:height .12s var(--ease-smooth); }
+
+/* hold-to-replay hint */
+.hold-hint{ font-size:11px; color:var(--text-muted); text-align:center; }
+
+/* ============================= SCAN ============================= */
+.camera-wrap{ position:relative; width:100%; aspect-ratio:3/4; background:#000; border-radius:var(--radius-md); overflow:hidden; border:1px solid var(--border); margin-bottom:14px; }
+.camera-wrap video{ width:100%; height:100%; object-fit:cover; display:block; }
+.camera-wrap canvas{ display:none; }
+.scan-frame{ position:absolute; inset:14%; pointer-events:none; }
+.scan-frame .corner{ position:absolute; width:26px; height:26px; border-color:var(--accent); transition:all .5s var(--ease-spring); }
+.scan-frame .corner.tl{ top:-30%; left:-30%; border-top:4px solid var(--accent); border-left:4px solid var(--accent); border-top-left-radius:8px; }
+.scan-frame .corner.tr{ top:-30%; right:-30%; border-top:4px solid var(--accent); border-right:4px solid var(--accent); border-top-right-radius:8px; }
+.scan-frame .corner.bl{ bottom:-30%; left:-30%; border-bottom:4px solid var(--accent); border-left:4px solid var(--accent); border-bottom-left-radius:8px; }
+.scan-frame .corner.br{ bottom:-30%; right:-30%; border-bottom:4px solid var(--accent); border-right:4px solid var(--accent); border-bottom-right-radius:8px; }
+.scan-frame.locked .corner{ top:0; left:0; right:0; bottom:0; }
+.scan-frame.locked .corner.tl{ top:-4px; left:-4px; }
+.scan-frame.locked .corner.tr{ top:-4px; right:-4px; }
+.scan-frame.locked .corner.bl{ bottom:-4px; left:-4px; }
+.scan-frame.locked .corner.br{ bottom:-4px; right:-4px; }
+.scan-frame.locked{ box-shadow:0 0 0 2000px rgba(0,0,0,.35); }
+.scan-frame .scanline{ position:absolute; left:2%; right:2%; height:2px; background:linear-gradient(90deg, transparent, var(--accent), transparent); top:0; animation:scanline 2.1s ease-in-out infinite; box-shadow:0 0 14px 2px var(--accent); }
+@keyframes scanline{ 0%{ top:0; } 50%{ top:100%; } 100%{ top:0; } }
+.scan-frame.locked .scanline{ display:none; }
+.camera-status{ position:absolute; left:12px; bottom:12px; right:12px; background:rgba(0,0,0,.6); backdrop-filter:blur(6px); padding:9px 12px; border-radius:12px; font-size:12.5px; color:#fff; text-align:center; }
+.camera-placeholder{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; padding:20px; text-align:center; color:var(--text-muted); font-size:13px; }
+
+/* verification steps */
+.verify-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:6px 16px; }
+.verify-banner{ display:flex; align-items:center; gap:8px; font-size:11px; color:var(--text-muted); background:var(--bg-elevated); border:1px dashed var(--border); border-radius:100px; padding:6px 12px; margin-bottom:12px; width:fit-content; }
+.verify-banner .dot-live{ width:6px; height:6px; border-radius:50%; background:var(--accent-2); animation:pulseSoft 1.4s infinite; }
+@keyframes pulseSoft{ 0%,100%{ opacity:1; } 50%{ opacity:.3; } }
+.confidence-ring{ width:120px; height:120px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:6px auto 4px; background:conic-gradient(var(--accent) calc(var(--pct,0)*1%), var(--border) 0); position:relative; }
+.confidence-ring::before{ content:''; position:absolute; inset:9px; border-radius:50%; background:var(--surface); }
+.confidence-ring span{ position:relative; font-family:var(--font-display); font-weight:700; font-size:24px; z-index:2; }
+.vstep{ display:flex; align-items:center; gap:12px; padding:14px 0; border-bottom:1px solid var(--border); }
+.vstep:last-child{ border-bottom:none; }
+.vstep .vicon{ width:34px; height:34px; border-radius:50%; background:var(--bg-elevated); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0; transition:all .3s var(--ease-spring); }
+.vstep.done .vicon{ background:var(--accent-2); color:#052422; border-color:transparent; transform:scale(1.05); }
+.vstep .vtext b{ font-size:13.5px; display:block; }
+.vstep .vtext span{ font-size:11.5px; color:var(--text-muted); }
+.vspin{ width:16px; height:16px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent); animation:spin .7s linear infinite; }
+
+.progress-track{ height:8px; border-radius:100px; background:var(--surface); overflow:hidden; border:1px solid var(--border); }
+.progress-fill{ height:100%; background:var(--accent); border-radius:100px; transition:width .35s var(--ease-smooth); width:0%; background-image:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent); background-size:200% 100%; animation:shimmer 1.6s linear infinite; }
+.progress-label{ display:flex; justify-content:space-between; font-size:12px; color:var(--text-muted); margin-top:6px; }
+@keyframes shimmer{ from{ background-position:200% 0; } to{ background-position:-200% 0; } }
+
+.control-row{ display:flex; gap:10px; align-items:center; justify-content:center; margin-top:16px; }
+[data-hand="left"] .control-row{ flex-direction:row-reverse; }
+.icon-btn{ width:52px; height:52px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.icon-btn:hover{ background:var(--surface-hover); }
+.icon-btn.primary{ width:64px; height:64px; background:var(--accent); color:var(--accent-ink); border:none; font-size:22px; }
+.icon-btn.holding{ box-shadow:0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+.speed-pills{ display:flex; gap:8px; justify-content:center; margin-top:14px; }
+.pill{ padding:8px 14px; border-radius:100px; border:1px solid var(--border); background:var(--surface); color:var(--text-muted); font-size:12.5px; font-weight:600; cursor:pointer; }
+.pill[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); border-color:transparent; }
+
+.summary-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-md); padding:18px; }
+.summary-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--border); font-size:14px; }
+.summary-row:last-child{ border-bottom:none; }
+.summary-row b{ color:var(--accent); }
+.reveal-box{ margin-top:12px; padding:12px 14px; border-radius:12px; background:var(--bg-elevated); border:1px dashed var(--border); font-family:monospace; font-size:15px; letter-spacing:.05em; word-break:break-all; color:var(--accent-2); }
+
+/* ============================= LEARNING ============================= */
+.tabbar{ display:flex; gap:6px; background:var(--surface); border:1px solid var(--border); padding:5px; border-radius:14px; margin-bottom:16px; }
+.tab-btn{ flex:1; padding:10px; border:none; background:transparent; color:var(--text-muted); border-radius:10px; font-weight:700; font-size:13px; cursor:pointer; }
+.tab-btn[aria-selected="true"]{ background:var(--accent); color:var(--accent-ink); }
+
+.char-grid{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+.char-tile{ aspect-ratio:1; border-radius:12px; background:var(--surface); border:1px solid var(--border); color:var(--text); font-family:var(--font-display); font-weight:700; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; position:relative; }
+.char-tile:hover{ background:var(--surface-hover); }
+.char-tile.digit{ color:var(--accent-2); }
+.char-tile.letter{ color:var(--accent); }
+.char-tile.mastered::after{ content:'✓'; position:absolute; top:2px; right:4px; font-size:9px; color:var(--accent-2); }
+
+.progress-strip{ display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.progress-strip .progress-track{ flex:1; }
+.progress-strip span{ font-size:11.5px; color:var(--text-muted); white-space:nowrap; }
+
+.quiz-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-lg); padding:22px; text-align:center; }
+.streak-badge{ display:inline-flex; align-items:center; gap:6px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:100px; padding:6px 12px; font-size:12px; font-weight:700; color:var(--accent); margin-bottom:10px; }
+.streak-badge.burst{ animation:chipPop .45s var(--ease-spring); }
+.choice-row{ display:flex; gap:12px; margin-top:18px; }
+.choice-btn{ flex:1; padding:16px; border-radius:16px; border:2px solid var(--border); background:var(--bg-elevated); color:var(--text); font-weight:700; cursor:pointer; }
+.choice-btn:hover{ border-color:var(--accent); }
+.choice-btn.correct{ border-color:var(--accent-2); background:color-mix(in srgb, var(--accent-2) 15%, var(--bg-elevated)); }
+.choice-btn.wrong{ border-color:var(--danger); background:color-mix(in srgb, var(--danger) 15%, var(--bg-elevated)); }
+.quiz-score{ font-size:12.5px; color:var(--text-muted); margin-top:14px; }
+.level-toast{ position:absolute; left:50%; top:14px; transform:translate(-50%,-140%); background:var(--accent); color:var(--accent-ink); font-weight:700; font-size:12.5px; padding:8px 16px; border-radius:100px; opacity:0; transition:all .4s var(--ease-spring); pointer-events:none; z-index:80; }
+.level-toast.show{ opacity:1; transform:translate(-50%,0); }
+
+/* ============================= VISUALIZE ============================= */
+textarea.viz-input{ width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:14px; padding:14px; font-size:15px; font-family:var(--font-body); resize:vertical; min-height:56px; }
+.preset-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.preset-chip{ padding:7px 13px; border-radius:100px; background:var(--surface); border:1px solid var(--border); color:var(--text-muted); font-size:12px; cursor:pointer; }
+.viz-meta{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-muted); width:100%; margin-top:2px; }
+.viz-strip{ display:flex; gap:8px; flex-wrap:wrap; margin-top:18px; justify-content:center; }
+.viz-strip .braille-cell.sm{ opacity:.35; transition:opacity var(--motion-fast), transform .25s var(--ease-spring); }
+.viz-strip .braille-cell.sm.active{ opacity:1; transform:translateY(-3px); }
+.viz-strip .braille-cell.sm.done{ opacity:.7; }
+
+/* ============================= SETTINGS ============================= */
+.setting-row{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 4px; border-bottom:1px solid var(--border); }
+.setting-row:last-child{ border-bottom:none; }
+.setting-label b{ display:block; font-size:14.5px; }
+.setting-label span{ font-size:12px; color:var(--text-muted); }
+.switch{ position:relative; width:50px; height:29px; flex-shrink:0; }
+.switch input{ opacity:0; width:100%; height:100%; margin:0; position:absolute; cursor:pointer; z-index:2; }
+.switch .track{ position:absolute; inset:0; background:var(--surface-hover); border:1px solid var(--border); border-radius:100px; transition:background var(--motion-fast); }
+.switch .thumb{ position:absolute; top:3px; left:3px; width:21px; height:21px; border-radius:50%; background:var(--text-muted); transition:transform .25s var(--ease-spring), background var(--motion-fast); }
+.switch input:checked + .track{ background:var(--accent); border-color:transparent; }
+.switch input:checked + .track + .thumb{ transform:translateX(21px); background:var(--accent-ink); }
+.switch input:focus-visible + .track{ outline:3px solid var(--focus); outline-offset:2px; }
+
+.segmented{ display:flex; gap:6px; background:var(--surface); border:1px solid var(--border); padding:4px; border-radius:12px; }
+.segmented button{ padding:8px 12px; border:none; background:transparent; color:var(--text-muted); border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; }
+.segmented button[aria-pressed="true"]{ background:var(--accent); color:var(--accent-ink); }
+
+.range-row{ display:flex; align-items:center; gap:10px; width:180px; }
+input[type="range"]{ flex:1; accent-color:var(--accent); }
+
+.mini-preview{ display:flex; align-items:center; justify-content:center; gap:14px; background:var(--bg-elevated); border:1px dashed var(--border); border-radius:16px; padding:16px; margin-top:6px; }
+
+/* ============================= HISTORY ============================= */
+.filter-row{ display:flex; gap:8px; margin-bottom:12px; }
+.search-input{ width:100%; background:var(--surface); border:1px solid var(--border); color:var(--text); border-radius:12px; padding:11px 14px; font-size:13.5px; margin-bottom:12px; }
+.history-item{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px; animation:cardIn .4s var(--ease-smooth) backwards; transition:transform .2s var(--ease-spring); }
+.history-item:hover{ transform:translateY(-2px); }
+@keyframes cardIn{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+.history-item .top-row{ display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:700; }
+.history-item .meta{ font-size:11.5px; color:var(--text-muted); margin-top:4px; }
+.badge{ font-size:10.5px; padding:3px 9px; border-radius:100px; background:var(--bg-elevated); color:var(--accent-2); font-weight:700; }
+.badge.status-cancelled{ color:var(--danger); }
+.badge.status-verified{ color:var(--accent-2); }
+.history-item .bottom-row{ display:flex; justify-content:flex-end; margin-top:8px; }
+.empty-state{ text-align:center; color:var(--text-muted); padding:60px 20px; font-size:13.5px; }
+
+/* ============================= ABOUT ============================= */
+.about-block{ margin-bottom:18px; }
+.about-block h3{ font-size:14.5px; margin-bottom:6px; color:var(--accent); }
+.about-block p{ font-size:13.5px; color:var(--text-muted); line-height:1.6; }
+.disclaimer{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:14px; font-size:12.5px; color:var(--text-muted); margin-top:6px; }
+.tech-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.tech-card{ background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:13px; }
+.tech-card .ic{ font-size:18px; margin-bottom:6px; display:block; }
+.tech-card b{ font-size:12.5px; display:block; }
+.tech-card span{ font-size:10.5px; color:var(--text-muted); }
+.roadmap{ position:relative; padding-left:22px; }
+.roadmap::before{ content:''; position:absolute; left:5px; top:4px; bottom:4px; width:2px; background:var(--border); }
+.road-step{ position:relative; padding-bottom:20px; opacity:0; animation:roadIn .5s var(--ease-smooth) forwards; }
+.road-step:nth-child(1){ animation-delay:.05s; } .road-step:nth-child(2){ animation-delay:.2s; } .road-step:nth-child(3){ animation-delay:.35s; } .road-step:nth-child(4){ animation-delay:.5s; }
+@keyframes roadIn{ from{ opacity:0; transform:translateX(-8px); } to{ opacity:1; transform:none; } }
+.road-step::before{ content:''; position:absolute; left:-22px; top:2px; width:12px; height:12px; border-radius:50%; background:var(--accent); border:2px solid var(--bg); }
+.road-step b{ font-size:13px; display:block; }
+.road-step span{ font-size:12px; color:var(--text-muted); }
+
+/* ============================= DEMO MODE (cinematic) ============================= */
+.demo-timeline{ display:flex; gap:5px; margin-bottom:14px; }
+.demo-timeline .seg{ flex:1; height:4px; border-radius:100px; background:var(--surface); overflow:hidden; }
+.demo-timeline .seg i{ display:block; height:100%; width:0%; background:var(--accent); transition:width .3s linear; }
+.demo-stage-icon{ font-size:40px; height:64px; display:flex; align-items:center; justify-content:center; }
+.demo-narration{ font-size:14px; line-height:1.55; text-align:center; min-height:64px; }
+.demo-banner{ background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 18%, var(--surface)), var(--surface)); border:1px solid var(--border); border-radius:14px; padding:12px 14px; font-size:12.5px; color:var(--text-muted); display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.demo-dot{ width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; animation:pulseSoft 1.4s infinite; }
+
+/* bottom tab bar */
+.tabbar-bottom{ display:flex; border-top:1px solid var(--border); background:var(--bg-elevated); flex-shrink:0; }
+[data-hand="left"] .tabbar-bottom{ flex-direction:row-reverse; }
+.tabbar-bottom button{ flex:1; background:transparent; border:none; color:var(--text-muted); padding:10px 4px 12px; font-size:10.5px; display:flex; flex-direction:column; align-items:center; gap:4px; cursor:pointer; font-weight:600; }
+.tabbar-bottom button .ic{ font-size:18px; transition:transform .25s var(--ease-spring); }
+.tabbar-bottom button[aria-current="true"]{ color:var(--accent); }
+.tabbar-bottom button[aria-current="true"] .ic{ transform:translateY(-2px) scale(1.1); }
+.backend-status{position:absolute;left:50%;top:46px;transform:translateX(-50%);z-index:60;width:calc(100% - 24px);max-width:360px;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--bg-elevated);border:1px solid var(--border);font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+.backend-status[hidden]{display:none;}
+.upi-field-controls{margin-top:12px;}
+.upi-field-controls .btn-row{flex-wrap:wrap;gap:8px;}
+.upi-field-controls button[disabled]{opacity:.45;cursor:not-allowed;}
+</style>
+</head>
+<body data-contrast="normal" data-motion="normal" data-textsize="normal" data-hand="right">
+
+<a href="#main-heading" class="skip-link" data-i18n="skip_link">Skip to content</a>
+<div id="live-region" class="sr-only" aria-live="polite" role="status"></div>
+<div id="live-region-assertive" class="sr-only" aria-live="assertive" role="alert"></div>
+
+<div class="device-frame">
+  <div class="device-notch" aria-hidden="true"></div>
+  <div class="device-screen" id="device-screen">
+
+    <div class="status-bar" aria-hidden="true"><span>BraillePay</span><span id="clock">--:--</span></div>
+    <div class="backend-status" id="backend-status" role="status" aria-live="polite" hidden>
+      <span id="backend-status-text">Connecting to the BraillePay server…</span>
+      <button type="button" class="retry-btn" id="backend-retry-btn" hidden>Retry now</button>
+    </div>
+    <div class="voice-indicator" id="voice-indicator" hidden><span class="voice-dot"></span><span id="voice-indicator-text">Listening for "Hey Braille"…</span></div>
+    <button class="voice-fab" id="voice-fab" hidden aria-pressed="false" aria-label="Voice assistant status, tap for a command list">🎙</button>
+
+    <div class="screens">
+
+      <!-- ============ SPLASH ============ -->
+      <section class="screen active" id="screen-login" aria-label="Sign in">
+        <div class="screen-header" style="justify-content:center;">
+          <div><div class="screen-title">BraillePay</div><div class="screen-sub">Sign in to your demo account</div></div>
+        </div>
+        <div class="verify-banner"><span class="dot-live"></span> Demo login — six seeded accounts, PIN 1234 for all</div>
+
+        <div class="setting-label" style="margin-bottom:8px;"><b>Username</b></div>
+        <input class="search-input" id="login-username-input" type="text" placeholder="aarav" autocomplete="username" aria-label="Username">
+        <div class="setting-label" style="margin:12px 0 6px;"><b>PIN</b></div>
+        <input class="search-input" id="login-pin-input" type="password" inputmode="numeric" maxlength="12" placeholder="1234" autocomplete="current-password" aria-label="PIN">
+        <div id="login-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;" aria-live="assertive"></div>
+        <div class="btn-row"><button class="btn btn-primary" id="login-submit-btn">Sign in</button></div>
+        <div class="btn-row"><button class="btn btn-ghost" id="login-passkey-btn">Use a passkey instead</button></div>
+
+        <h3 style="margin:18px 0 8px;font-size:14px;">Demo accounts</h3>
+        <div class="preset-row" id="login-demo-users"></div>
+        <div class="disclaimer">BraillePay is a simulated payment environment. It does not process real money or connect to real banking infrastructure, UPI, NPCI, or any bank.</div>
+      </section>
+
+      <section class="screen" id="screen-splash" aria-label="Splash screen">
+        <div class="splash-logo" id="splash-cells" aria-hidden="true"></div>
+        <h1 class="brand-title">BraillePay</h1>
+        <p class="brand-tag" data-i18n="splash_tag">A blind-friendly way to verify what a QR code says — through sound and touch, never by giving away the answer.</p>
+        <div class="splash-ring" aria-hidden="true"></div>
+        <button class="btn btn-primary" style="width:auto;padding:14px 26px;margin-top:10px;" id="splash-continue" data-i18n="splash_enter">Enter app</button>
+        <p class="splash-hint" data-i18n="splash_hint">Tap anywhere, or wait a moment…</p>
+      </section>
+
+      <!-- ============ HOME ============ -->
+      <section class="screen" id="screen-home" aria-label="Home">
+        <div class="home-hero">
+          <h1 id="main-heading" data-i18n="home_hello">Hello 👋</h1>
+          <p data-i18n="home_intro">Scan a QR code and BraillePay will let you feel and hear its pattern — one character at a time — without ever spoiling what it says.</p>
+          <div class="summary-card" id="home-balance-card" style="text-align:center;margin:12px 0;">
+            <div class="cell-caption">Available balance</div>
+            <div id="home-balance-line" style="font-family:var(--font-display);font-size:24px;font-weight:700;">₹0</div>
+          </div>
+          <div class="hero-cells" id="hero-cells" aria-hidden="true"></div>
+        </div>
+
+        <div class="nav-grid" role="navigation" aria-label="Main menu">
+          <button class="nav-card" data-nav="scan"><div class="icon">▣</div><b data-i18n="nav_scan_title">Scan QR</b><span data-i18n="nav_scan_sub">Open the camera and verify a code</span></button>
+          <button class="nav-card" data-nav="send"><div class="icon alt">₹</div><b data-i18n="send_title">Send Money</b><span data-i18n="nav_send_sub">Demo UPI-style payment (simulated)</span></button>
+          <button class="nav-card" data-nav="receive"><div class="icon">📥</div><b>Receive Money</b><span>Show your QR, share your UPI ID</span></button>
+          <button class="nav-card" data-nav="requests"><div class="icon alt">⇄</div><b>Payment Requests</b><span>Ask for, pay, or decline a request</span></button>
+          <button class="nav-card" data-nav="balance"><div class="icon">💰</div><b data-i18n="balance_title">Balance &amp; Transactions</b><span data-i18n="nav_balance_sub">Demo balance, recent activity</span></button>
+          <button class="nav-card" data-nav="banks"><div class="icon alt">🏦</div><b>Banks</b><span>The two demo banks behind BraillePay</span></button>
+          <button class="nav-card" data-nav="notifications"><div class="icon">🔔</div><b>Notifications</b><span id="home-notif-sub">Payments, requests, refunds</span></button>
+          <button class="nav-card" data-nav="learning"><div class="icon alt">🎓</div><b data-i18n="learn_title">Learning Mode</b><span data-i18n="nav_learning_sub">Interactive Braille trainer</span></button>
+          <button class="nav-card" data-nav="visualize"><div class="icon">⠿</div><b data-i18n="viz_title">Visualizer</b><span data-i18n="nav_viz_sub">Type anything, feel every cell</span></button>
+          <button class="nav-card" data-nav="history"><div class="icon alt">🕘</div><b data-i18n="history_title">Scan History</b><span data-i18n="nav_history_sub">Search and replay past scans</span></button>
+          <button class="nav-card wide" data-nav="demo"><div class="icon">▶</div><div><b data-i18n="demo_title">Guided Demo</b><div><span data-i18n="nav_demo_sub">A cinematic walkthrough — no camera needed</span></div></div></button>
+          <button class="nav-card" data-nav="settings"><div class="icon alt">⚙</div><b data-i18n="nav_settings_title">Accessibility &amp; Security</b><span data-i18n="nav_settings_sub">Voice, haptics, lock, contrast</span></button>
+          <button class="nav-card" data-nav="about"><div class="icon">ℹ</div><b data-i18n="about_title">About</b><span data-i18n="nav_about_sub">Roadmap &amp; what's next</span></button>
+          <button class="nav-card" id="nav-card-admin" data-nav="admin" hidden><div class="icon alt">📊</div><b>Demo Dashboard</b><span>Totals across all six demo accounts</span></button>
+        </div>
+      </section>
+
+      <!-- ============ SCAN ============ -->
+      <section class="screen" id="screen-scan" aria-label="Scan QR code">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="scan_title">Scan QR</div><div class="screen-sub" id="scan-substate" data-i18n="scan_sub_default">Point the camera at a QR code</div></div>
+        </div>
+
+        <div class="camera-wrap" id="camera-wrap">
+          <video id="camera-video" playsinline autoplay muted></video>
+          <canvas id="camera-canvas"></canvas>
+          <div class="scan-frame" id="scan-frame" hidden>
+            <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+            <div class="scanline"></div>
+          </div>
+          <div class="camera-status" id="camera-status" hidden data-i18n="scan_searching">Searching for a QR code…</div>
+          <div class="camera-placeholder" id="camera-placeholder">
+            <span style="font-size:34px;">▣</span>
+            <span data-i18n="scan_cam_placeholder">Camera hasn't started yet. BraillePay needs camera access to scan — nothing you scan is ever sent anywhere.</span>
+          </div>
+        </div>
+
+        <div id="scan-start-controls">
+          <button class="btn btn-primary" id="btn-start-camera" data-i18n="scan_start_camera">Start camera</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" id="btn-try-demo-scan" data-i18n="scan_try_no_camera">Try it without a camera</button>
+          <button class="btn btn-secondary" style="margin-top:10px;" id="btn-use-demo-qr">Use Demo QR (BraillePay payment)</button>
+          <div class="preset-row" id="scan-demo-qr-list" hidden style="margin-top:10px;"></div>
+        </div>
+
+        <!-- verification sequence (fully simulated, no real payment) -->
+        <div id="scan-verify" hidden>
+          <div class="verify-banner"><span class="dot-live"></span> <span data-i18n="scan_verify_banner">Simulated verification — no real payment, no bank connection</span></div>
+          <div class="confidence-ring" style="--pct:0;" id="confidence-ring"><span id="confidence-value">0%</span></div>
+          <p class="cell-caption" style="margin-bottom:10px;" data-i18n="scan_confidence">Confidence</p>
+          <div class="verify-card" id="verify-steps"></div>
+        </div>
+
+        <!-- step-through player, shown once a QR is decoded -->
+        <div id="scan-player" hidden>
+          <div class="progress-track"><div class="progress-fill" id="scan-progress-fill"></div></div>
+          <div class="progress-label"><span id="scan-progress-label">Character 0 of 0</span><span id="scan-progress-pct">0%</span></div>
+
+          <div class="cell-stage">
+            <div class="cell-wrap">
+              <div class="ripple-ring" id="scan-ring"></div>
+              <div class="braille-cell lg" id="scan-cell">
+                <button class="dot" data-dot="1"></button><button class="dot" data-dot="4"></button>
+                <button class="dot" data-dot="2"></button><button class="dot" data-dot="5"></button>
+                <button class="dot" data-dot="3"></button><button class="dot" data-dot="6"></button>
+              </div>
+            </div>
+            <div class="waveform" id="scan-waveform" aria-hidden="true"></div>
+            <div class="category-chip" id="scan-chip" data-i18n="scan_ready">Ready</div>
+            <div class="cell-caption" id="scan-caption" data-i18n="scan_caption">The category is announced and vibrated. The identity itself stays private — that's the point.</div>
+            <div class="hold-hint" data-i18n="hold_hint_replay">Press and hold the cell to keep replaying this pattern</div>
+          </div>
+
+          <div class="upi-field-controls" id="upi-field-controls" role="group" aria-label="Choose what to read from this UPI code" hidden>
+            <p class="cell-caption">The UPI ID is read first. Choose anything else to hear it in Braille:</p>
+            <div class="btn-row">
+              <button class="pill" type="button" data-upi-field="upi">Read UPI ID</button>
+              <button class="pill" type="button" data-upi-field="amount">Read amount</button>
+              <button class="pill" type="button" data-upi-field="note">Read note</button>
+              <button class="pill" type="button" data-upi-field="name">Read payee name</button>
+            </div>
+          </div>
+          <div class="control-row">
+            <button class="icon-btn" id="scan-replay-char" aria-label="Replay this character">↺</button>
+            <button class="icon-btn primary" id="scan-play-pause" aria-label="Pause">⏸</button>
+            <button class="icon-btn" id="scan-skip" aria-label="Skip to next character">⏭</button>
+          </div>
+          <div class="speed-pills" role="group" aria-label="Playback speed">
+            <button class="pill" data-speed="1" data-i18n="speed_slow">Slow</button>
+            <button class="pill" data-speed="1.4" aria-pressed="true" data-i18n="speed_normal">Normal</button>
+            <button class="pill" data-speed="2" data-i18n="speed_fast">Fast</button>
+          </div>
+        </div>
+
+        <!-- summary shown after the full scan finishes -->
+        <div id="scan-summary" hidden>
+          <div class="summary-card">
+            <div class="summary-row"><span data-i18n="sum_chars_read">Characters read</span><b id="sum-total">0</b></div>
+            <div class="summary-row"><span data-i18n="sum_letters">Letters</span><b id="sum-letters">0</b></div>
+            <div class="summary-row"><span data-i18n="sum_digits">Digits</span><b id="sum-digits">0</b></div>
+            <div class="summary-row"><span data-i18n="sum_other">Spaces / symbols</span><b id="sum-other">0</b></div>
+          </div>
+          <div class="reveal-box" id="reveal-box" hidden></div>
+          <div class="btn-row"><button class="btn btn-secondary" id="btn-reveal-text" data-i18n="btn_reveal_text">Show text (sighted demo aid)</button></div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="btn-replay-scan" data-i18n="btn_replay">Replay</button>
+            <button class="btn btn-primary" id="btn-scan-again" data-i18n="btn_scan_again">Scan another</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ LEARNING ============ -->
+      <section class="screen" id="screen-learning" aria-label="Learning mode">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="learn_title">Learning Mode</div><div class="screen-sub" data-i18n="learn_sub">Here identities ARE spoken — this is where you learn them</div></div>
+        </div>
+
+        <div class="tabbar" role="tablist" aria-label="Learning mode sections">
+          <button class="tab-btn" role="tab" id="tab-browse" aria-selected="true" data-tab="browse" data-i18n="tab_browse">Browse</button>
+          <button class="tab-btn" role="tab" id="tab-quiz" aria-selected="false" data-tab="quiz" data-i18n="tab_quiz">Practice quiz</button>
+        </div>
+
+        <div id="learning-browse">
+          <div class="progress-strip"><div class="progress-track"><div class="progress-fill" id="mastery-fill" style="width:0%"></div></div><span id="mastery-label">0 / 20 mastered</span></div>
+
+          <div class="auto-lesson-panel" id="auto-lesson-panel">
+            <div class="auto-lesson-row">
+              <span id="auto-lesson-progress" aria-hidden="true">1 / 36</span>
+              <div class="segmented" role="group" aria-label="Automatic lesson speed">
+                <button data-learnspeed="0.7" data-i18n="speed_slow">Slow</button><button data-learnspeed="1" aria-pressed="true" data-i18n="speed_normal">Normal</button><button data-learnspeed="1.4" data-i18n="speed_fast">Fast</button>
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-danger" id="learning-stop-btn" aria-label="Stop automatic learning" data-i18n="learning_stop">Stop automatic learning</button>
+              <button class="btn btn-primary" id="learning-start-btn" hidden data-i18n="learning_start">Start automatic lesson</button>
+            </div>
+            <div class="hey-braille-hint" data-i18n="learning_hey_braille_hint">Say: "Hey Braille, vibrate B"</div>
+          </div>
+
+          <div class="cell-stage" style="padding-top:6px;">
+            <div class="cell-wrap"><div class="ripple-ring" id="learn-ring"></div>
+              <div class="braille-cell lg" id="learn-cell">
+                <button class="dot" data-dot="1"></button><button class="dot" data-dot="4"></button>
+                <button class="dot" data-dot="2"></button><button class="dot" data-dot="5"></button>
+                <button class="dot" data-dot="3"></button><button class="dot" data-dot="6"></button>
+              </div>
+            </div>
+            <div class="category-chip" id="learn-chip" data-i18n="learn_tap_char">Tap a character below</div>
+            <div class="hold-hint" data-i18n="hold_hint_dot">Tap a dot on the cell above to replay just that dot</div>
+          </div>
+
+          <div class="summary-card" id="learning-complete-panel" hidden style="text-align:center;">
+            <div style="font-weight:700;margin-bottom:4px;" data-i18n="learning_complete_title">Lesson complete.</div>
+            <div class="cell-caption" style="margin-bottom:12px;" data-i18n="learning_complete_sub">You learned A to Z and 0 to 9.</div>
+            <button class="btn btn-primary" id="learning-repeat-btn" data-i18n="learning_repeat">Repeat Lesson</button>
+          </div>
+
+          <div class="char-grid" id="char-grid" role="group" aria-label="Alphabet and digits"></div>
+        </div>
+
+        <div id="learning-quiz" hidden style="position:relative;">
+          <div class="level-toast" id="level-toast" data-i18n="level_up">Level up! 🎉</div>
+          <div class="quiz-card">
+            <div class="streak-badge" id="streak-badge">🔥 Streak: 0</div>
+            <div class="cell-wrap" style="display:block;margin:0 auto;width:fit-content;"><div class="ripple-ring" id="quiz-ring"></div>
+              <div class="braille-cell lg" id="quiz-cell" style="margin:0 auto;">
+                <button class="dot" data-dot="1"></button><button class="dot" data-dot="4"></button>
+                <button class="dot" data-dot="2"></button><button class="dot" data-dot="5"></button>
+                <button class="dot" data-dot="3"></button><button class="dot" data-dot="6"></button>
+              </div>
+            </div>
+            <p class="cell-caption" style="margin-top:14px;" id="quiz-caption" data-i18n="quiz_caption_default">Feel the pattern (or listen to the vibration), then guess.</p>
+            <div class="choice-row">
+              <button class="choice-btn" id="quiz-guess-letter" data-i18n="letter">Letter</button>
+              <button class="choice-btn" id="quiz-guess-digit" data-i18n="digit">Digit</button>
+            </div>
+            <div class="quiz-score" id="quiz-score">Score: 0 / 0</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" id="quiz-replay" data-i18n="quiz_replay">Feel it again</button>
+            <button class="btn btn-primary" id="quiz-next" data-i18n="quiz_next">New pattern</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ VISUALIZE ============ -->
+      <section class="screen" id="screen-visualize" aria-label="Braille visualizer">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="viz_title">Visualizer</div><div class="screen-sub" data-i18n="viz_sub">Type anything and feel it, cell by cell</div></div>
+        </div>
+
+        <textarea class="viz-input" id="viz-input" maxlength="40" placeholder="Type a word or phrase…" aria-label="Text to visualize" data-i18n-ph="viz_placeholder"></textarea>
+        <div class="preset-row" id="viz-presets"></div>
+
+        <div class="cell-stage">
+          <div class="cell-wrap"><div class="ripple-ring" id="viz-ring"></div>
+            <div class="braille-cell lg" id="viz-cell">
+              <button class="dot" data-dot="1"></button><button class="dot" data-dot="4"></button>
+              <button class="dot" data-dot="2"></button><button class="dot" data-dot="5"></button>
+              <button class="dot" data-dot="3"></button><button class="dot" data-dot="6"></button>
+            </div>
+          </div>
+          <div class="cell-caption" id="viz-caption">Character 0 of 0 — “”</div>
+          <div class="viz-meta"><span id="viz-index-label">Index 0/0</span><span id="viz-eta-label">~0s remaining</span></div>
+        </div>
+        <div class="viz-strip" id="viz-strip"></div>
+
+        <div class="control-row">
+          <button class="icon-btn" id="viz-prev" aria-label="Previous character">⏮</button>
+          <button class="icon-btn" id="viz-replay" aria-label="Replay from start">↺</button>
+          <button class="icon-btn primary" id="viz-play-pause" aria-label="Play">▶</button>
+          <button class="icon-btn" id="viz-skip" aria-label="Next character">⏭</button>
+        </div>
+        <div class="speed-pills" role="group" aria-label="Visualizer speed">
+          <button class="pill" data-vizspeed="0.6" data-i18n="speed_slow">Slow</button>
+          <button class="pill" data-vizspeed="1" aria-pressed="true" data-i18n="speed_normal">Normal</button>
+          <button class="pill" data-vizspeed="1.7" data-i18n="speed_fast">Fast</button>
+        </div>
+      </section>
+
+      <!-- ============ DEMO MODE (cinematic) ============ -->
+      <section class="screen" id="screen-demo" aria-label="Guided demo">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="demo_title">Guided Demo</div><div class="screen-sub" data-i18n="demo_sub">A cinematic walkthrough of the whole app</div></div>
+        </div>
+
+        <div class="demo-banner" id="demo-banner" hidden><span class="demo-dot"></span><span id="demo-status-text">Demo running…</span></div>
+        <div class="demo-timeline" id="demo-timeline"></div>
+
+        <div class="cell-stage">
+          <div class="demo-stage-icon" id="demo-stage-icon">✨</div>
+          <div class="cell-wrap"><div class="ripple-ring" id="demo-ring"></div>
+            <div class="braille-cell lg" id="demo-cell">
+              <button class="dot" data-dot="1"></button><button class="dot" data-dot="4"></button>
+              <button class="dot" data-dot="2"></button><button class="dot" data-dot="5"></button>
+              <button class="dot" data-dot="3"></button><button class="dot" data-dot="6"></button>
+            </div>
+          </div>
+          <div class="category-chip" id="demo-chip" data-i18n="demo_idle">Idle</div>
+          <div class="demo-narration" id="demo-caption" data-i18n="demo_caption_default">This walks through scanning, learning, and settings automatically — good for showing someone the whole app in one go.</div>
+        </div>
+
+        <div class="progress-track"><div class="progress-fill" id="demo-progress-fill"></div></div>
+
+        <div class="btn-row"><button class="btn btn-primary" id="btn-demo-start" data-i18n="demo_start">Start guided demo</button></div>
+        <div class="btn-row" id="demo-stop-row" hidden><button class="btn btn-danger" id="btn-demo-stop" data-i18n="demo_stop">Stop demo</button></div>
+      </section>
+
+      <!-- ============ SETTINGS ============ -->
+      <section class="screen" id="screen-settings" aria-label="Accessibility settings">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="settings_title">Accessibility</div><div class="screen-sub" data-i18n="settings_sub">Every change previews instantly</div></div>
+        </div>
+
+        <div class="mini-preview">
+          <div class="braille-cell" id="settings-preview-cell">
+            <div class="dot" data-dot="1"></div><div class="dot" data-dot="4"></div>
+            <div class="dot" data-dot="2"></div><div class="dot" data-dot="5"></div>
+            <div class="dot" data-dot="3"></div><div class="dot" data-dot="6"></div>
+          </div>
+          <div>
+            <div style="font-size:12.5px;font-weight:700;" data-i18n="settings_live_preview">Live preview</div>
+            <div style="font-size:11px;color:var(--text-muted);" data-i18n="settings_live_preview_sub">Toggling a setting demonstrates it here</div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label"><b>Account</b><span id="settings-account-line">Not signed in</span></div>
+          <button class="btn btn-secondary btn-sm" id="settings-signout-btn">Sign out</button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label"><b>Server passkey</b><span id="settings-passkey-status">Register this device to sign in without a PIN next time</span></div>
+          <button class="btn btn-secondary btn-sm" id="settings-register-passkey-btn">Register passkey</button>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_speech">Voice announcements</b><span data-i18n="settings_speech_sub">Speaks category names and prompts aloud</span></div>
+          <label class="switch"><input type="checkbox" id="set-speech" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_haptics">Haptics / vibration</b><span data-i18n="settings_haptics_sub">Feel each dot pattern on supported devices</span></div>
+          <label class="switch"><input type="checkbox" id="set-haptics" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_intensity">Vibration intensity</b><span id="intensity-value">100%</span></div>
+          <div class="range-row"><input type="range" id="set-intensity" min="50" max="150" value="100" step="10" aria-label="Vibration intensity"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_contrast">High-contrast palette</b><span data-i18n="settings_contrast_sub">Pure black background, maximum contrast</span></div>
+          <label class="switch"><input type="checkbox" id="set-contrast"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_motion">Reduce motion</b><span data-i18n="settings_motion_sub">Minimizes animation throughout the app</span></div>
+          <label class="switch"><input type="checkbox" id="set-motion"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_hand">Left-handed layout</b><span data-i18n="settings_hand_sub">Mirrors controls for left-hand use</span></div>
+          <label class="switch"><input type="checkbox" id="set-hand"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_reveal">Reveal identities in demo</b><span data-i18n="settings_reveal_sub">Also speak/show the actual letter or digit — for showing sighted people how it works</span></div>
+          <label class="switch"><input type="checkbox" id="set-reveal"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_voice_label">Voice assistant ("Hey Braille")</b><span id="voice-status-text">Say the wake phrase, then a command like "scan QR" or "check balance"</span></div>
+          <label class="switch"><input type="checkbox" id="set-voice"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_autolock">Auto-lock</b><span data-i18n="settings_autolock_sub">Lock the app after 2 minutes of inactivity</span></div>
+          <label class="switch"><input type="checkbox" id="set-autolock" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_language">Language</b><span data-i18n="settings_language_sub">Spoken announcements and the voice assistant</span></div>
+          <div class="segmented" role="group" aria-label="Language">
+            <button data-lang="en" aria-pressed="true">English</button><button data-lang="hi" aria-pressed="false">हिंदी</button><button data-lang="mr" aria-pressed="false">मराठी</button>
+          </div>
+        </div>
+        <div class="voice-status-line" id="voice-status-line" role="status" aria-live="polite">
+          <span id="voice-status-icon" aria-hidden="true">✓</span>
+          <span id="voice-status-detail">—</span>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_rate">Speech rate</b><span id="rate-value">1.0×</span></div>
+          <div class="segmented" role="group" aria-label="Speech rate">
+            <button data-rate="0.75" data-i18n="speed_slow">Slow</button><button data-rate="1" aria-pressed="true" data-i18n="speed_normal">Normal</button><button data-rate="1.3" data-i18n="speed_fast">Fast</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label"><b data-i18n="settings_textsize">Text size</b><span data-i18n="settings_textsize_sub">Adjusts screen text (not braille dots)</span></div>
+          <div class="segmented" role="group" aria-label="Text size">
+            <button data-textsize="normal" aria-pressed="true">A</button><button data-textsize="large" aria-pressed="false">A+</button><button data-textsize="xlarge" aria-pressed="false">A++</button>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="btn-test-vibration" data-i18n="btn_test_vibration">Test vibration</button>
+          <button class="btn btn-secondary" id="btn-test-voice" data-i18n="btn_test_voice">Test voice</button>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost" id="btn-test-braille" data-i18n="btn_test_braille">Test Braille playback</button></div>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="screen" id="screen-history" aria-label="Scan history">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="history_title">Scan History</div><div class="screen-sub" data-i18n="history_sub">No account, no money, no data leaves this device</div></div>
+        </div>
+        <input class="search-input" id="history-search" type="search" placeholder="Search history…" aria-label="Search scan history" data-i18n-ph="history_search_ph">
+        <div class="filter-row" role="group" aria-label="Filter history">
+          <button class="pill" data-filter="all" aria-pressed="true" data-i18n="filter_all">All</button>
+          <button class="pill" data-filter="read" aria-pressed="false">Read</button>
+        </div>
+        <div id="history-list"></div>
+      </section>
+
+      <!-- ============ ABOUT ============ -->
+      <section class="screen" id="screen-about" aria-label="About BraillePay">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div class="screen-title" data-i18n="about_title">About</div>
+        </div>
+
+        <div class="about-block">
+          <h3 data-i18n="about_h1">What this is</h3>
+          <p data-i18n="about_p1">BraillePay is a prototype for verifying the contents of a QR code independently, using sound and vibration instead of sight — built around a real 6-dot Braille cell.</p>
+        </div>
+        <div class="about-block">
+          <h3 data-i18n="about_h2">What it deliberately withholds</h3>
+          <p data-i18n="about_p2">During a scan, BraillePay only ever announces whether a character is a letter or a digit — never the letter or digit itself. The full Braille dot pattern is still shown and vibrated out in full, so a Braille-literate user can independently read the actual value themselves.</p>
+        </div>
+        <div class="about-block">
+          <h3 data-i18n="about_h3">What this is not</h3>
+          <p data-i18n="about_p3">There is no camera upload, no real UPI or bank linkage, and no real payment anywhere in this app. The verification screen you see during a scan is entirely simulated for demonstration; QR content is decoded on-device and never transmitted.</p>
+        </div>
+
+        <div class="about-block">
+          <h3 data-i18n="about_h4">Technology overview</h3>
+          <div class="tech-grid">
+            <div class="tech-card"><span class="ic">▣</span><b data-i18n="tech1_title">On-device QR decode</b><span data-i18n="tech1_sub">jsQR, runs fully client-side</span></div>
+            <div class="tech-card"><span class="ic">🔊</span><b data-i18n="tech2_title">Web Speech API</b><span data-i18n="tech2_sub">Category-only announcements</span></div>
+            <div class="tech-card"><span class="ic">📳</span><b data-i18n="tech3_title">Vibration API</b><span data-i18n="tech3_sub">Dot-accurate haptic patterns</span></div>
+            <div class="tech-card"><span class="ic">⠿</span><b data-i18n="tech4_title">Grade-1 Braille engine</b><span data-i18n="tech4_sub">Real 6-dot pattern table</span></div>
+          </div>
+        </div>
+
+        <div class="about-block">
+          <h3 data-i18n="about_h5">Roadmap</h3>
+          <div class="roadmap">
+            <div class="road-step"><b data-i18n="road1_b">Today — Prototype</b><span data-i18n="road1_s">Camera QR scan, category-only verification, learning mode, visualizer.</span></div>
+            <div class="road-step"><b data-i18n="road2_b">Next — Grade-2 Braille</b><span data-i18n="road2_s">Contractions and abbreviations for faster reading.</span></div>
+            <div class="road-step"><b data-i18n="road3_b">Future — Smartwatch companion</b><span data-i18n="road3_s">Wrist-tap haptics so verification doesn't need the phone out.</span></div>
+            <div class="road-step"><b data-i18n="road4_b">Future — Bluetooth Braille wearables</b><span data-i18n="road4_s">Pairing with dedicated refreshable-Braille or haptic-glove hardware, plus on-device heuristics to flag unusually-shaped codes for extra caution.</span></div>
+          </div>
+        </div>
+
+        <div class="disclaimer" data-i18n="about_disclaimer">This is a demo/prototype interface. All history and settings live only in this browser tab's memory and reset on reload. No backend, no UPI, no bank connection.</div>
+      </section>
+
+      <!-- ============ SEND MONEY (demo) ============ -->
+      <section class="screen" id="screen-send" aria-label="Send money, demo">
+        <div class="screen-header">
+          <button class="back-btn" id="send-back-btn" aria-label="Back">←</button>
+          <div><div class="screen-title" data-i18n="send_title">Send Money</div><div class="screen-sub" data-i18n="send_sub">Simulated UPI-style demo — no real transfer, ever</div></div>
+        </div>
+        <div class="verify-banner"><span class="dot-live"></span> <span data-i18n="send_banner">Demo payment — no real money moves, no bank or UPI network involved</span></div>
+
+        <div id="send-step-recipient">
+          <div class="setting-label" style="margin-bottom:8px;"><b>Recipient UPI ID</b></div>
+          <input class="search-input" id="send-recipient-input" type="text" placeholder="shivani@braillepay" aria-label="Recipient UPI ID" autocomplete="off">
+          <div id="send-recipient-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;"></div>
+          <div class="preset-row" id="send-demo-recipients"></div>
+          <div id="send-recipient-card" hidden class="summary-card" style="margin-top:14px;">
+            <div class="summary-row"><span data-i18n="send_recipient">Recipient</span><b id="rp-name"></b></div>
+            <div class="summary-row"><span data-i18n="send_upi_id">UPI ID</span><b id="rp-upi"></b></div>
+            <div class="summary-row"><span data-i18n="send_bank">Bank</span><b id="rp-bank"></b></div>
+            <div class="summary-row"><span data-i18n="send_status">Status</span><b id="rp-badge" style="color:var(--accent-2);" data-i18n="send_verified_demo">✓ Verified (demo)</b></div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" id="send-continue-recipient" disabled data-i18n="btn_continue">Continue</button></div>
+        </div>
+
+        <div id="send-step-amount" hidden>
+          <div class="summary-card" style="text-align:center;margin-bottom:14px;">
+            <div class="cell-caption" data-i18n="send_demo_balance">Demo balance</div>
+            <div style="font-family:var(--font-display);font-size:26px;font-weight:700;" id="send-balance-display">₹0</div>
+          </div>
+          <div class="setting-label" style="margin-bottom:6px;"><b data-i18n="send_amount_label">Amount (₹)</b></div>
+          <input class="search-input" id="send-amount-input" type="number" min="1" inputmode="numeric" placeholder="500" aria-label="Amount in rupees">
+          <div class="setting-label" style="margin:12px 0 6px;"><b data-i18n="send_note_label">Note (optional)</b></div>
+          <input class="search-input" id="send-note-input" type="text" placeholder="For lunch" aria-label="Payment note" maxlength="40" data-i18n-ph="send_note_ph">
+          <div id="send-amount-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;"></div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" data-send-back="recipient" data-i18n="btn_back">Back</button>
+            <button class="btn btn-primary" id="send-continue-amount" data-i18n="btn_continue">Continue</button>
+          </div>
+        </div>
+
+        <div id="send-step-summary" hidden>
+          <div class="summary-card">
+            <div class="summary-row"><span data-i18n="send_recipient">Recipient</span><b id="sm-name"></b></div>
+            <div class="summary-row"><span data-i18n="send_upi_id">UPI ID</span><b id="sm-upi"></b></div>
+            <div class="summary-row"><span data-i18n="send_amount">Amount</span><b id="sm-amount"></b></div>
+            <div class="summary-row"><span data-i18n="send_note">Note</span><b id="sm-note"></b></div>
+            <div class="summary-row"><span data-i18n="send_fee">Fee</span><b data-i18n="send_fee_demo">₹0 (demo)</b></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" data-send-back="amount" data-i18n="btn_back">Back</button>
+            <button class="btn btn-primary" id="send-continue-summary" data-i18n="send_confirm_pay">Confirm &amp; Pay</button>
+          </div>
+        </div>
+
+        <div id="send-step-auth" hidden>
+          <div class="cell-stage">
+            <div style="font-size:44px;" id="send-auth-icon">🔒</div>
+            <div class="category-chip" id="send-auth-status" data-i18n="send_confirm_to_pay">Confirm to pay</div>
+            <div class="cell-caption" id="send-auth-caption">Use your device's biometric prompt, or enter the demo PIN (1234).</div>
+          </div>
+          <div class="btn-row"><button class="btn btn-primary" id="send-auth-biometric" data-i18n="btn_confirm_bio">Confirm with biometrics</button></div>
+          <div class="btn-row"><button class="btn btn-secondary" id="send-auth-pin-btn" data-i18n="btn_use_pin">Use demo PIN instead</button></div>
+          <div id="send-pin-pad" hidden></div>
+        </div>
+
+        <div id="send-step-processing" hidden>
+          <div class="cell-stage">
+            <div class="splash-ring" aria-hidden="true" style="margin:10px auto;"></div>
+            <div class="cell-caption" data-i18n="send_processing">Processing your demo payment…</div>
+          </div>
+        </div>
+
+        <div id="send-step-success" hidden>
+          <div class="cell-stage">
+            <div style="font-size:52px;color:var(--accent-2);">✓</div>
+            <div class="category-chip digit" data-i18n="send_success_chip">Payment Successful (Demo)</div>
+            <div class="cell-caption" id="send-success-caption"></div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-row"><span data-i18n="send_txid">Transaction ID</span><b id="rc-txid"></b></div>
+            <div class="summary-row"><span data-i18n="send_utr">UTR Number</span><b id="rc-utr"></b></div>
+            <div class="summary-row"><span data-i18n="send_time">Time</span><b id="rc-time"></b></div>
+            <div class="summary-row"><span data-i18n="send_remaining_balance">Remaining balance</span><b id="rc-balance"></b></div>
+          </div>
+          <div class="disclaimer" data-i18n="send_disclaimer">This is a Demo Transaction. No real money was sent; no bank or UPI network was contacted.</div>
+          <div class="btn-row">
+            <button class="btn btn-secondary" id="send-share-receipt" data-i18n="btn_share_receipt">Share receipt</button>
+            <button class="btn btn-secondary" id="send-download-receipt" data-i18n="btn_download">Download</button>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="send-repeat-receipt" data-i18n="btn_repeat_aloud">Repeat aloud</button>
+            <button class="btn btn-primary" data-nav="home" data-i18n="btn_return_home">Return home</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ BALANCE & TRANSACTIONS ============ -->
+      <section class="screen" id="screen-balance" aria-label="Balance and transactions">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home" data-i18n-aria="common_back">←</button>
+          <div><div class="screen-title" data-i18n="balance_title">Balance &amp; Transactions</div><div class="screen-sub">Simulated BraillePay account — stored on the demo server</div></div>
+        </div>
+        <div class="summary-card" style="text-align:center;">
+          <div class="cell-caption" data-i18n="balance_available">Available balance (demo)</div>
+          <div style="font-family:var(--font-display);font-size:30px;font-weight:700;" id="balance-main-display">₹0</div>
+          <button class="btn btn-ghost btn-sm" id="btn-speak-balance" style="margin-top:8px;" data-i18n="btn_speak_balance">🔊 Speak balance</button>
+        </div>
+        <h3 style="margin:18px 0 8px;font-size:14px;" data-i18n="balance_recent_activity">Recent activity</h3>
+        <div id="balance-tx-list"></div>
+      </section>
+
+      <!-- ============ RECEIVE MONEY ============ -->
+      <section class="screen" id="screen-receive" aria-label="Receive money">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Receive Money</div><div class="screen-sub">Share this to get simulated money from another BraillePay demo user</div></div>
+        </div>
+        <div class="verify-banner"><span class="dot-live"></span> Demo QR — no real bank or UPI network involved</div>
+        <div class="summary-card" style="text-align:center;">
+          <img id="receive-qr-img" alt="Your BraillePay QR code" style="width:180px;height:180px;border-radius:12px;background:#fff;padding:10px;margin:8px auto;display:block;" />
+          <div style="font-family:var(--font-display);font-size:18px;font-weight:700;" id="receive-name">—</div>
+          <div class="cell-caption" id="receive-upi">—</div>
+          <div class="cell-caption" id="receive-bank">—</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" id="receive-copy-upi">Copy UPI ID</button>
+          <button class="btn btn-secondary" id="receive-download-qr">Download QR</button>
+        </div>
+        <div class="btn-row"><button class="btn btn-ghost" id="receive-share-qr">Share QR</button></div>
+        <p class="disclaimer">Ask another BraillePay demo user to scan this QR (or pick your name from Scan → Use Demo QR) to send you simulated money.</p>
+      </section>
+
+      <!-- ============ PAYMENT REQUESTS ============ -->
+      <section class="screen" id="screen-requests" aria-label="Payment requests">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Payment Requests</div><div class="screen-sub">Ask a demo user for simulated money, or settle a request from someone else</div></div>
+        </div>
+
+        <h3 style="margin:8px 0 8px;font-size:14px;">New request</h3>
+        <div class="setting-label" style="margin-bottom:6px;"><b>Request from (UPI ID)</b></div>
+        <input class="search-input" id="req-payer-input" type="text" placeholder="rohan@braillepay" aria-label="Request from UPI ID">
+        <div class="preset-row" id="req-demo-payers"></div>
+        <div class="setting-label" style="margin:10px 0 6px;"><b>Amount (₹)</b></div>
+        <input class="search-input" id="req-amount-input" type="number" min="1" placeholder="200" aria-label="Request amount">
+        <div class="setting-label" style="margin:10px 0 6px;"><b>Note (optional)</b></div>
+        <input class="search-input" id="req-note-input" type="text" placeholder="Splitting the cab" maxlength="60" aria-label="Request note">
+        <div id="req-create-error" class="cell-caption" style="color:var(--danger);min-height:16px;text-align:left;"></div>
+        <div class="btn-row"><button class="btn btn-primary" id="req-create-btn">Send request</button></div>
+
+        <h3 style="margin:20px 0 8px;font-size:14px;">Incoming — waiting on you</h3>
+        <div id="req-incoming-list"><p class="cell-caption">Loading…</p></div>
+
+        <h3 style="margin:20px 0 8px;font-size:14px;">Outgoing — you requested</h3>
+        <div id="req-outgoing-list"><p class="cell-caption">Loading…</p></div>
+      </section>
+
+      <!-- ============ BANKS ============ -->
+      <section class="screen" id="screen-banks" aria-label="Demo banks">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Banks</div><div class="screen-sub">Two fictional demo banks — not real financial institutions</div></div>
+        </div>
+        <div id="banks-list"><p class="cell-caption">Loading…</p></div>
+        <p class="disclaimer">These are simulated demo banks created for BraillePay. No real bank, UPI, or NPCI infrastructure is involved.</p>
+      </section>
+
+      <!-- ============ NOTIFICATIONS ============ -->
+      <section class="screen" id="screen-notifications" aria-label="Notifications">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Notifications</div><div class="screen-sub" id="notif-screen-sub">All caught up</div></div>
+        </div>
+        <div id="notif-list"><p class="cell-caption">Loading…</p></div>
+      </section>
+
+      <!-- ============ DEMO ADMIN DASHBOARD ============ -->
+      <section class="screen" id="screen-admin" aria-label="Demo dashboard">
+        <div class="screen-header">
+          <button class="back-btn" data-nav="home" aria-label="Back to home">←</button>
+          <div><div class="screen-title">Demo Dashboard</div><div class="screen-sub">Totals across all six seeded demo accounts</div></div>
+        </div>
+        <div id="admin-stats"><p class="cell-caption">Loading…</p></div>
+        <h3 style="margin:18px 0 8px;font-size:14px;">Recent transactions</h3>
+        <div id="admin-recent-tx"></div>
+        <div class="btn-row"><button class="btn btn-secondary" id="admin-reset-btn">Reset Demo Data</button></div>
+      </section>
+
+    </div>
+
+    <!-- ============ APP LOCK OVERLAY ============ -->
+    <div id="app-lock" role="dialog" aria-modal="true" aria-label="App locked" hidden>
+      <div class="lock-inner">
+        <div style="font-size:40px;" id="lock-icon">🔒</div>
+        <h1 style="font-size:20px;" tabindex="-1" id="lock-heading" data-i18n="lock_title">BraillePay is locked</h1>
+        <p class="cell-caption" id="lock-caption">Unlock with your device's biometrics, or use the demo PIN.</p>
+        <p class="lock-status" id="lock-status" aria-live="assertive"></p>
+        <div class="btn-row" id="lock-biometric-row"><button class="btn btn-primary" id="lock-biometric-btn">Unlock with biometrics</button></div>
+        <div class="btn-row"><button class="btn btn-secondary" id="lock-pin-toggle-btn">Use demo PIN instead</button></div>
+        <div id="lock-pin-pad" hidden></div>
+        <p class="hold-hint" style="margin-top:14px;"><span data-i18n="lock_pin_hint_pre">Demo PIN is</span> <b>1234</b> <span data-i18n="lock_pin_hint_post">— this is a prototype, not a real security boundary.</span></p>
+      </div>
+    </div>
+    <div class="app-toast" id="app-toast" role="status"></div>
+
+    <nav class="tabbar-bottom" id="tabbar-bottom" aria-label="Quick navigation">
+      <button data-nav="home" aria-current="true"><span class="ic">⌂</span><span data-i18n="tab_home">Home</span></button>
+      <button data-nav="scan"><span class="ic">▣</span><span data-i18n="tab_scan_short">Scan</span></button>
+      <button data-nav="learning"><span class="ic">🎓</span><span data-i18n="tab_learn_short">Learn</span></button>
+      <button data-nav="history"><span class="ic">🕘</span><span data-i18n="tab_history_short">History</span></button>
+      <button data-nav="settings"><span class="ic">⚙</span><span data-i18n="tab_settings_short">Settings</span></button>
+    </nav>
+
+  </div>
+</div>
+
+
+<script src="config.js"></script>
+<script src="vendor/jsQR.js"></script>
+<script src="js/braille-map.js"></script>
+<script src="js/braille-timing.js"></script>
+<script src="js/upi-parser.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
